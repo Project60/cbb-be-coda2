@@ -5,7 +5,7 @@
 /**
  * (Delegated) Implementation of hook_civicrm_config
  */
-function _becoda32_civix_civicrm_config(&$config = NULL) {
+function _becoda23_civix_civicrm_config(&$config = NULL) {
   static $configured = FALSE;
   if ($configured) return;
   $configured = TRUE;
@@ -30,8 +30,8 @@ function _becoda32_civix_civicrm_config(&$config = NULL) {
  *
  * @param $files array(string)
  */
-function _becoda32_civix_civicrm_xmlMenu(&$files) {
-  foreach (_becoda32_civix_glob(__DIR__ . '/xml/Menu/*.xml') as $file) {
+function _becoda23_civix_civicrm_xmlMenu(&$files) {
+  foreach (_becoda23_civix_glob(__DIR__ . '/xml/Menu/*.xml') as $file) {
     $files[] = $file;
   }
 }
@@ -39,9 +39,9 @@ function _becoda32_civix_civicrm_xmlMenu(&$files) {
 /**
  * Implementation of hook_civicrm_install
  */
-function _becoda32_civix_civicrm_install() {
-  _becoda32_civix_civicrm_config();
-  if ($upgrader = _becoda32_civix_upgrader()) {
+function _becoda23_civix_civicrm_install() {
+  _becoda23_civix_civicrm_config();
+  if ($upgrader = _becoda23_civix_upgrader()) {
     return $upgrader->onInstall();
   }
 }
@@ -49,9 +49,9 @@ function _becoda32_civix_civicrm_install() {
 /**
  * Implementation of hook_civicrm_uninstall
  */
-function _becoda32_civix_civicrm_uninstall() {
-  _becoda32_civix_civicrm_config();
-  if ($upgrader = _becoda32_civix_upgrader()) {
+function _becoda23_civix_civicrm_uninstall() {
+  _becoda23_civix_civicrm_config();
+  if ($upgrader = _becoda23_civix_upgrader()) {
     return $upgrader->onUninstall();
   }
 }
@@ -59,9 +59,9 @@ function _becoda32_civix_civicrm_uninstall() {
 /**
  * (Delegated) Implementation of hook_civicrm_enable
  */
-function _becoda32_civix_civicrm_enable() {
-  _becoda32_civix_civicrm_config();
-  if ($upgrader = _becoda32_civix_upgrader()) {
+function _becoda23_civix_civicrm_enable() {
+  _becoda23_civix_civicrm_config();
+  if ($upgrader = _becoda23_civix_upgrader()) {
     if (is_callable(array($upgrader, 'onEnable'))) {
       return $upgrader->onEnable();
     }
@@ -71,9 +71,9 @@ function _becoda32_civix_civicrm_enable() {
 /**
  * (Delegated) Implementation of hook_civicrm_disable
  */
-function _becoda32_civix_civicrm_disable() {
-  _becoda32_civix_civicrm_config();
-  if ($upgrader = _becoda32_civix_upgrader()) {
+function _becoda23_civix_civicrm_disable() {
+  _becoda23_civix_civicrm_config();
+  if ($upgrader = _becoda23_civix_upgrader()) {
     if (is_callable(array($upgrader, 'onDisable'))) {
       return $upgrader->onDisable();
     }
@@ -89,17 +89,17 @@ function _becoda32_civix_civicrm_disable() {
  * @return mixed  based on op. for 'check', returns array(boolean) (TRUE if upgrades are pending)
  *                for 'enqueue', returns void
  */
-function _becoda32_civix_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
-  if ($upgrader = _becoda32_civix_upgrader()) {
+function _becoda23_civix_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
+  if ($upgrader = _becoda23_civix_upgrader()) {
     return $upgrader->onUpgrade($op, $queue);
   }
 }
 
-function _becoda32_civix_upgrader() {
-  if (!file_exists(__DIR__.'/CRM/Becoda32/Upgrader.php')) {
+function _becoda23_civix_upgrader() {
+  if (!file_exists(__DIR__.'/CRM/Becoda23/Upgrader.php')) {
     return NULL;
   } else {
-    return CRM_Becoda32_Upgrader_Base::instance();
+    return CRM_Becoda23_Upgrader_Base::instance();
   }
 }
 
@@ -110,12 +110,12 @@ function _becoda32_civix_upgrader() {
  * @param $pattern string, glob pattern, eg "*.txt"
  * @return array(string)
  */
-function _becoda32_civix_find_files($dir, $pattern) {
+function _becoda23_civix_find_files($dir, $pattern) {
   $todos = array($dir);
   $result = array();
   while (!empty($todos)) {
     $subdir = array_shift($todos);
-    foreach (_becoda32_civix_glob("$subdir/$pattern") as $match) {
+    foreach (_becoda23_civix_glob("$subdir/$pattern") as $match) {
       if (!is_dir($match)) {
         $result[] = $match;
       }
@@ -138,13 +138,13 @@ function _becoda32_civix_find_files($dir, $pattern) {
  *
  * Find any *.mgd.php files, merge their content, and return.
  */
-function _becoda32_civix_civicrm_managed(&$entities) {
-  $mgdFiles = _becoda32_civix_find_files(__DIR__, '*.mgd.php');
+function _becoda23_civix_civicrm_managed(&$entities) {
+  $mgdFiles = _becoda23_civix_find_files(__DIR__, '*.mgd.php');
   foreach ($mgdFiles as $file) {
     $es = include $file;
     foreach ($es as $e) {
       if (empty($e['module'])) {
-        $e['module'] = 'org.project60.becoda32';
+        $e['module'] = 'org.project60.becoda23';
       }
       $entities[] = $e;
     }
@@ -163,7 +163,7 @@ function _becoda32_civix_civicrm_managed(&$entities) {
  * @param string $pattern
  * @return array, possibly empty
  */
-function _becoda32_civix_glob($pattern) {
+function _becoda23_civix_glob($pattern) {
   $result = glob($pattern);
   return is_array($result) ? $result : array();
 }

@@ -8,7 +8,7 @@
  * @param type $id
  * @param type $params
  */
-function becoda32_civicrm_pre($op, $objectName, $id, &$params) {
+function becoda23_civicrm_pre($op, $objectName, $id, &$params) {
   $parts = array(
       'hook',
       'pre',
@@ -16,9 +16,9 @@ function becoda32_civicrm_pre($op, $objectName, $id, &$params) {
       strtolower($op)
   );
   $methodName = implode('_', $parts);
-  if (method_exists('CRM_Becoda32_Logic', $methodName)) {
-    CRM_Becoda32_Logic::debug(ts('Calling CODA32 Logic'), $methodName, 'alert');
-    CRM_Becoda32_Logic::$methodName($id, $params);
+  if (method_exists('CRM_Becoda23_Logic', $methodName)) {
+    CRM_Becoda23_Logic::debug(ts('Calling CODA32 Logic'), $methodName, 'alert');
+    CRM_Becoda23_Logic::$methodName($id, $params);
   }
 }
 
@@ -30,7 +30,7 @@ function becoda32_civicrm_pre($op, $objectName, $id, &$params) {
  * @param type $id
  * @param type $params
  */
-function becoda32_civicrm_post( $op, $objectName, $objectId, &$objectRef ) {
+function becoda23_civicrm_post( $op, $objectName, $objectId, &$objectRef ) {
   $parts = array(
       'hook',
       'post',
@@ -38,14 +38,14 @@ function becoda32_civicrm_post( $op, $objectName, $objectId, &$objectRef ) {
       strtolower($op)
   );
   $methodName = implode('_', $parts);
-  if (method_exists('CRM_Becoda32_Logic', $methodName)) {
-    CRM_Becoda32_Logic::debug(ts('Calling CODA32 Logic'), $methodName, 'alert');
-    CRM_Becoda32_Logic::$methodName($objectId, $objectRef);
+  if (method_exists('CRM_Becoda23_Logic', $methodName)) {
+    CRM_Becoda23_Logic::debug(ts('Calling CODA32 Logic'), $methodName, 'alert');
+    CRM_Becoda23_Logic::$methodName($objectId, $objectRef);
   }
 }
 
 
 // totten's addition
-function becoda32_civicrm_entityTypes(&$entityTypes) {
+function becoda23_civicrm_entityTypes(&$entityTypes) {
   // add my DAO's
 }

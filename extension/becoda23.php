@@ -1,13 +1,13 @@
 <?php
 
-require_once 'becoda32.civix.php';
+require_once 'becoda23.civix.php';
 require_once 'hooks.php';
 
 /**
  * Implementation of hook_civicrm_config
  */
-function becoda32_civicrm_config(&$config) {
-  _becoda32_civix_civicrm_config($config);
+function becoda23_civicrm_config(&$config) {
+  _becoda23_civix_civicrm_config($config);
 }
 
 /**
@@ -15,39 +15,39 @@ function becoda32_civicrm_config(&$config) {
  *
  * @param $files array(string)
  */
-function becoda32_civicrm_xmlMenu(&$files) {
-  _becoda32_civix_civicrm_xmlMenu($files);
+function becoda23_civicrm_xmlMenu(&$files) {
+  _becoda23_civix_civicrm_xmlMenu($files);
 }
 
 /**
  * Implementation of hook_civicrm_install
  */
-function becoda32_civicrm_install() {
+function becoda23_civicrm_install() {
   //add the required option groups
   banking_civicrm_install_options(banking_civicrm_options());
 
-  return _becoda32_civix_civicrm_install();
+  return _becoda23_civix_civicrm_install();
 }
 
 /**
  * Implementation of hook_civicrm_uninstall
  */
-function becoda32_civicrm_uninstall() {
-  return _becoda32_civix_civicrm_uninstall();
+function becoda23_civicrm_uninstall() {
+  return _becoda23_civix_civicrm_uninstall();
 }
 
 /**
  * Implementation of hook_civicrm_enable
  */
-function becoda32_civicrm_enable() {
-  return _becoda32_civix_civicrm_enable();
+function becoda23_civicrm_enable() {
+  return _becoda23_civix_civicrm_enable();
 }
 
 /**
  * Implementation of hook_civicrm_disable
  */
-function becoda32_civicrm_disable() {
-  return _becoda32_civix_civicrm_disable();
+function becoda23_civicrm_disable() {
+  return _becoda23_civix_civicrm_disable();
 }
 
 /**
@@ -59,8 +59,8 @@ function becoda32_civicrm_disable() {
  * @return mixed  based on op. for 'check', returns array(boolean) (TRUE if upgrades are pending)
  *                for 'enqueue', returns void
  */
-function becoda32_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
-  return _becoda32_civix_civicrm_upgrade($op, $queue);
+function becoda23_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
+  return _becoda23_civix_civicrm_upgrade($op, $queue);
 }
 
 /**
@@ -69,12 +69,11 @@ function becoda32_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * Generate a list of entities to create/deactivate/delete when this module
  * is installed, disabled, uninstalled.
  */
-function becoda32_civicrm_managed(&$entities) {
-  return _becoda32_civix_civicrm_managed($entities);
+function becoda23_civicrm_managed(&$entities) {
+  return _becoda23_civix_civicrm_managed($entities);
 }
 
-
-function becoda32_civicrm_install_options($data) {
+function becoda23_civicrm_install_options($data) {
   foreach ($data as $groupName => $group) {
     // check group existence
     $result = civicrm_api('option_group', 'getsingle', array('version' => 3, 'name' => $groupName));
@@ -90,7 +89,8 @@ function becoda32_civicrm_install_options($data) {
       );
       $result = civicrm_api('option_group', 'create', $params);
       $group_id = $result['values'][0]['id'];
-    } else
+    }
+    else
       $group_id = $result['id'];
 
     if (is_array($group['values'])) {
@@ -120,9 +120,16 @@ function becoda32_civicrm_install_options($data) {
   }
 }
 
-
-function becoda32_civicrm_options() {
-  // start with the lowest weight value
+function becoda23_civicrm_options() {
   return array(
+      'civicrm_banking.plugin_type' => array(
+          'values' => array(
+              'CODA 2.3 (Belgium)' => array(
+                  'label' => 'CODA 2.3 Import Plugin',
+                  'value' => 'CRM_Becoda23_Plugin_Becoda23',
+                  'is_default' => 0,
+              ),
+          ),
+      ),
   );
 }

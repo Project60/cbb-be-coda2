@@ -1,4 +1,4 @@
-DESTDIR = org.project60.becoda32
+DESTDIR = org.project60.becoda23
 ZIPNAME = civibanking
 
 VERSION := $(shell head -1 NEWS)
