@@ -24,7 +24,7 @@ function becoda23_civicrm_xmlMenu(&$files) {
  */
 function becoda23_civicrm_install() {
   //add the required option groups
-  banking_civicrm_install_options(banking_civicrm_options());
+  becoda23_civicrm_install_options(becoda23_civicrm_options());
 
   return _becoda23_civix_civicrm_install();
 }
@@ -122,7 +122,7 @@ function becoda23_civicrm_install_options($data) {
 
 function becoda23_civicrm_options() {
   return array(
-      'civicrm_banking.plugin_type' => array(
+      'civicrm_banking.plugin_types' => array(
           'values' => array(
               'CODA 2.3 (Belgium)' => array(
                   'label' => 'CODA 2.3 Import Plugin',
