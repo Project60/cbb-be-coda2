@@ -1,6 +1,7 @@
 <?php
 
 require_once 'becoda32.civix.php';
+require_once 'hooks.php';
 
 /**
  * Implementation of hook_civicrm_config
@@ -22,6 +23,9 @@ function becoda32_civicrm_xmlMenu(&$files) {
  * Implementation of hook_civicrm_install
  */
 function becoda32_civicrm_install() {
+  //add the required option groups
+  banking_civicrm_install_options(banking_civicrm_options());
+
   return _becoda32_civix_civicrm_install();
 }
 
@@ -67,4 +71,58 @@ function becoda32_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  */
 function becoda32_civicrm_managed(&$entities) {
   return _becoda32_civix_civicrm_managed($entities);
+}
+
+
+function becoda32_civicrm_install_options($data) {
+  foreach ($data as $groupName => $group) {
+    // check group existence
+    $result = civicrm_api('option_group', 'getsingle', array('version' => 3, 'name' => $groupName));
+    if (isset($result['is_error']) && $result['is_error']) {
+      $params = array(
+          'version' => 3,
+          'sequential' => 1,
+          'name' => $groupName,
+          'is_reserved' => 1,
+          'is_active' => 1,
+          'title' => $group['title'],
+          'description' => $group['description'],
+      );
+      $result = civicrm_api('option_group', 'create', $params);
+      $group_id = $result['values'][0]['id'];
+    } else
+      $group_id = $result['id'];
+
+    if (is_array($group['values'])) {
+      $groupValues = $group['values'];
+      $weight = 1;
+      //print_r(array_keys($groupValues));
+      foreach ($groupValues as $valueName => $value) {
+        $result = civicrm_api('option_value', 'getsingle', array('version' => 3, 'name' => $valueName));
+        if (isset($result['is_error']) && $result['is_error']) {
+          $params = array(
+              'version' => 3,
+              'sequential' => 1,
+              'option_group_id' => $group_id,
+              'name' => $valueName,
+              'label' => $value['label'],
+              'value' => $value['value'],
+              'weight' => $weight,
+              'is_default' => $value['is_default'],
+              'is_active' => 1,
+          );
+          $result = civicrm_api('option_value', 'create', $params);
+        } else {
+          $weight = $result['weight'] + 1;
+        }
+      }
+    }
+  }
+}
+
+
+function becoda32_civicrm_options() {
+  // start with the lowest weight value
+  return array(
+  );
 }
