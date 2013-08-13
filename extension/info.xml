@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<extension key="org.project60.becoda32" type="module">
+  <file>becoda32</file>
+  <name>CiviBanking CODA 2.3 Plugin</name>
+  <description>CiviBanking import plugin for Belgian CODA 2.3 format</description>
+ <license>GNU AGPL v3 or later</license>
+  <maintainer>
+    <author>CiviCRM banking integration working group ("Project 60")</author>
+    <email>project-60@ml.foebud.org</email>
+  </maintainer>
+  <releaseDate>2013-03-09</releaseDate>
+  <version>0.1</version>
+  <develStage>alpha</develStage>
+  <compatibility>
+    <ver>4.3</ver>
+  </compatibility>
+  <comments></comments>
+  <civix>
+    <namespace>CRM/Becoda32</namespace>
+  </civix>
+</extension>
