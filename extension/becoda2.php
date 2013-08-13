@@ -1,13 +1,13 @@
 <?php
 
-require_once 'becoda23.civix.php';
+require_once 'becoda2.civix.php';
 require_once 'hooks.php';
 
 /**
  * Implementation of hook_civicrm_config
  */
-function becoda23_civicrm_config(&$config) {
-  _becoda23_civix_civicrm_config($config);
+function becoda2_civicrm_config(&$config) {
+  _becoda2_civix_civicrm_config($config);
 }
 
 /**
@@ -15,39 +15,39 @@ function becoda23_civicrm_config(&$config) {
  *
  * @param $files array(string)
  */
-function becoda23_civicrm_xmlMenu(&$files) {
-  _becoda23_civix_civicrm_xmlMenu($files);
+function becoda2_civicrm_xmlMenu(&$files) {
+  _becoda2_civix_civicrm_xmlMenu($files);
 }
 
 /**
  * Implementation of hook_civicrm_install
  */
-function becoda23_civicrm_install() {
+function becoda2_civicrm_install() {
   //add the required option groups
-  becoda23_civicrm_install_options(becoda23_civicrm_options());
+  becoda2_civicrm_install_options(becoda2_civicrm_options());
 
-  return _becoda23_civix_civicrm_install();
+  return _becoda2_civix_civicrm_install();
 }
 
 /**
  * Implementation of hook_civicrm_uninstall
  */
-function becoda23_civicrm_uninstall() {
-  return _becoda23_civix_civicrm_uninstall();
+function becoda2_civicrm_uninstall() {
+  return _becoda2_civix_civicrm_uninstall();
 }
 
 /**
  * Implementation of hook_civicrm_enable
  */
-function becoda23_civicrm_enable() {
-  return _becoda23_civix_civicrm_enable();
+function becoda2_civicrm_enable() {
+  return _becoda2_civix_civicrm_enable();
 }
 
 /**
  * Implementation of hook_civicrm_disable
  */
-function becoda23_civicrm_disable() {
-  return _becoda23_civix_civicrm_disable();
+function becoda2_civicrm_disable() {
+  return _becoda2_civix_civicrm_disable();
 }
 
 /**
@@ -59,8 +59,8 @@ function becoda23_civicrm_disable() {
  * @return mixed  based on op. for 'check', returns array(boolean) (TRUE if upgrades are pending)
  *                for 'enqueue', returns void
  */
-function becoda23_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
-  return _becoda23_civix_civicrm_upgrade($op, $queue);
+function becoda2_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
+  return _becoda2_civix_civicrm_upgrade($op, $queue);
 }
 
 /**
@@ -69,11 +69,11 @@ function becoda23_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * Generate a list of entities to create/deactivate/delete when this module
  * is installed, disabled, uninstalled.
  */
-function becoda23_civicrm_managed(&$entities) {
-  return _becoda23_civix_civicrm_managed($entities);
+function becoda2_civicrm_managed(&$entities) {
+  return _becoda2_civix_civicrm_managed($entities);
 }
 
-function becoda23_civicrm_install_options($data) {
+function becoda2_civicrm_install_options($data) {
   foreach ($data as $groupName => $group) {
     // check group existence
     $result = civicrm_api('option_group', 'getsingle', array('version' => 3, 'name' => $groupName));
@@ -120,13 +120,13 @@ function becoda23_civicrm_install_options($data) {
   }
 }
 
-function becoda23_civicrm_options() {
+function becoda2_civicrm_options() {
   return array(
       'civicrm_banking.plugin_types' => array(
           'values' => array(
               'CODA 2.3 (Belgium)' => array(
                   'label' => 'CODA 2.3 Import Plugin',
-                  'value' => 'CRM_Becoda23_Plugin_Becoda23',
+                  'value' => 'CRM_Becoda2_Plugin_Becoda2',
                   'is_default' => 0,
               ),
           ),

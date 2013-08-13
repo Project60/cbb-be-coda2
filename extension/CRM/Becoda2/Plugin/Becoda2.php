@@ -23,7 +23,7 @@
  * $Id$
  *
  */
-class CRM_Becoda23_PluginImpl_Becoda23 extends CRM_Banking_PluginModel_Importer {
+class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer {
 
   /**
    * class constructor
