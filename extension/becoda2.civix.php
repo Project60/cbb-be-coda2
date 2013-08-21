@@ -144,7 +144,7 @@ function _becoda2_civix_civicrm_managed(&$entities) {
     $es = include $file;
     foreach ($es as $e) {
       if (empty($e['module'])) {
-        $e['module'] = 'org.project60.becoda2';
+        $e['module'] = 'org.project60.becoda32';
       }
       $entities[] = $e;
     }
