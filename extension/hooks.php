@@ -17,7 +17,7 @@ function becoda2_civicrm_pre($op, $objectName, $id, &$params) {
   );
   $methodName = implode('_', $parts);
   if (method_exists('CRM_Becoda2_Logic', $methodName)) {
-    CRM_Becoda2_Logic::debug(ts('Calling CODA32 Logic'), $methodName, 'alert');
+    CRM_Becoda2_Logic::debug(ts('Calling CODA2 Logic'), $methodName, 'alert');
     CRM_Becoda2_Logic::$methodName($id, $params);
   }
 }
@@ -39,7 +39,7 @@ function becoda2_civicrm_post( $op, $objectName, $objectId, &$objectRef ) {
   );
   $methodName = implode('_', $parts);
   if (method_exists('CRM_Becoda2_Logic', $methodName)) {
-    CRM_Becoda2_Logic::debug(ts('Calling CODA32 Logic'), $methodName, 'alert');
+    CRM_Becoda2_Logic::debug(ts('Calling CODA2 Logic'), $methodName, 'alert');
     CRM_Becoda2_Logic::$methodName($objectId, $objectRef);
   }
 }

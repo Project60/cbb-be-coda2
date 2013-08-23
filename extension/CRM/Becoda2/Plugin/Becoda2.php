@@ -83,8 +83,6 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer {
     $config = $this->_plugin_config;
     $this->reportProgress(0.0, sprintf("Starting to read file '%s'...", $params['source']));
 
-    $cf = new CRM_Becoda2_PluginImpl_File($file_path);
-
     /*
      * From the CODA specification : 
      * 
@@ -104,13 +102,15 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer {
      * physical file. Each CODA file corresponds to a separate batch of 
      * transactions.
      */
-    while ($btxb = $cf->nextBatch()) {
-      while ($btx = $cf->nextRecord()) {
-        $this->addBtx($btx, $btxb);
-      }
-      $cf->closeBatch($btxb);
+    
+    $this->readFile($file_path);
+    if (!$this->isError()) {
+      $batches = $this->getBatches();    // array of coda_file
+      // loop per batch over records and convert into BTX
     }
-    $cf->close();
+      
+      
+    $this->closeFile();
 
     $this->reportDone();
   }
