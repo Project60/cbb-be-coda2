@@ -52,7 +52,8 @@ class CodaReader_old{
                     $this->processCodaFile($line);                    
                 }                				
 			}
-		}		
+		}	
+//		print_r($this->codabatches);
 		return $this->codabatches;
 	}
         
@@ -62,6 +63,7 @@ class CodaReader_old{
 	}
     
     protected function processCodaFile($process_record){
+//      echo '<br/>', ($process_record);
 		$identification_record = substr($process_record, 0, 1);       
 		switch($identification_record) {			
 			case '0':   // header record

@@ -7,15 +7,15 @@ class ProcessCodaFile{
     public $codafilerecords=array();
 
     public function __construct() {          
-        $this->dbo = project::$codaDBO;
+      $this->dbo = project::$codaDBO;
     }
    
     public function parseFile($file_path){        
         $CodaReader = new CodaReader_old($this->dbo);
         $this->codafiles = $CodaReader->parseFile($file_path);
         $this->codafilerecords = $CodaReader->getCodaRecords();
-        var_dump($this->codafiles);
-        var_dump($this->codafilerecords);
+//        var_dump($this->codafiles);
+//        var_dump($this->codafilerecords);
     }
     
     public function process($file_path){
@@ -42,21 +42,21 @@ class ProcessCodaFile{
     
     protected function get_or_create_codafile($codafile){
         $qs = new dao('civicrm_coda_batch', 'codaDBO');
-        $qs->f('file', $codafile->file)
-           ->f('sequence', $codafile->sequence)
-           ->f('date_created_by_bank', $codafile->date_created_by_bank)
-           ->f('source', $codafile->source);
-        //$qs->f('source', $codafile->source)
-        //   ->f('sequence', $codafile->sequence);
+//        $qs->f('file', $codafile->file)
+//           ->f('sequence', $codafile->sequence)
+//           ->f('date_created_by_bank', $codafile->date_created_by_bank)
+//           ->f('source', $codafile->source);
+        $qs->f('source', $codafile->source)
+           ->f('sequence', $codafile->sequence);
         $res = $qs->read();        
         $qs->setdata($codafile->getFields());
-        $qs->status='NEW';
+        $qs->status='new';
         if (empty($res)){            
             $pkid = $qs->create();
         }else{      
             $pkid = $res[0][$qs->getPK()];
             $qs->setdata($codafile->getData());
-            $qs->update($pkid);
+//            $qs->update($pkid);
         }
         return $pkid;
     }

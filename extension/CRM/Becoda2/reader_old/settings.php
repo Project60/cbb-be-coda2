@@ -3,10 +3,10 @@
 class settings{
     static $instance;
     static $project = 'coda processing';
-    static $civi = array('dbname'=>'civibanking', 'host'=>'localhost', 'user'=>'root', 'passw'=>'');
-    static $coda = array('dbname'=>'civibanking', 'host'=>'localhost', 'user'=>'root', 'passw'=>'');
-    static $civi_api_path='/../administrator/components/com_civicrm/civicrm/api/class.api.php';
-    static $civipath='/../administrator/components/com_civicrm/';
+    static $civi = array('dbname'=>'dev_msliga_civi', 'host'=>'127.0.0.1', 'user'=>'root', 'passw'=>'');
+    static $coda = array('dbname'=>'dev_msliga_civi', 'host'=>'127.0.0.1', 'user'=>'root', 'passw'=>'');
+    static $civi_api_path='/var/www/msliga-civi/sites/all/modules/civicrm/api/class.api.php';
+    static $civipath='/var/www/msliga-civi/sites/all/modules/civicrm/';
     static $codapath = 'data/coda';
 
     public static function instantiate(){

@@ -7,7 +7,6 @@ class DBO{
     public function __construct($dbinfo=array('dbname'=>'','host'=>'localhost', 'user'=>'root', 'passw'=>'')) {
         $dbname = $dbinfo['dbname'];
         $this->dbname=$dbname;
-        
         $this->con = new mysqli($dbinfo['host'], $dbinfo['user'], $dbinfo['passw'], $dbname);
         if (mysqli_connect_errno()) {
             exit('Connect failed: '. mysqli_connect_error());
@@ -38,7 +37,8 @@ class DBO{
     
     public static function &getTables($dbo){       
         $stmt = $dbo->con->query('show tables');
-        $res = $stmt->fetch_all(MYSQLI_ASSOC);
+        $res = array();
+        while ($row = $stmt->fetch_assoc()) $res[] = $row;
         $list = array();
         foreach($res as $row){
             $list[] = $row['Tables_in_'.$dbo->dbname];
@@ -47,9 +47,10 @@ class DBO{
     }
     
     public static function &getFields($dbo, $table){
-        $stmt = $dbo->con->query('show columns from '.$table);        
-        $res = $stmt->fetch_all(MYSQLI_ASSOC);
-        return $res;
+      $stmt = $dbo->con->query('show columns from '.$table);        
+      $res = array();
+      while ($row = $stmt->fetch_assoc()) $res[] = $row;
+      return $res;
     }
     
     public static function getScheme($dbo, $table){
@@ -65,6 +66,7 @@ class DBO{
             $result['fields'][$fieldname] = $fieldinfo;
            
         }
+        
         return $result;
     }
 

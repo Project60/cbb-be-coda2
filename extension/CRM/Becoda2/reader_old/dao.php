@@ -150,7 +150,9 @@ class dao{
         if($limit==1){
             return $rs->fetch_assoc();
         }else{
-            return $rs->fetch_all(MYSQLI_ASSOC);
+            $res = array();
+            while ($row = $rs->fetch_assoc()) $res[] = $row;
+            return $res;
         }                      
     }
 
@@ -170,7 +172,7 @@ class dao{
         $this->setCreated();
         $this->setModified();
         $sql = 'insert into `'.$this->table.'` set '.self::paramstr($this->data, $pk);
-        //echo '<BR>'.$sql;
+        echo '<hR>CREATE:'.$sql;
         $rs  = $this->dbo->query($sql);
         if ($rs===false){
             echo '<BR>sql :'.$sql;
@@ -211,7 +213,7 @@ class dao{
         }else{
             $sql .= " where `$pk`=".$id;
         }
-        //echo '<BR>'.$sql;
+        echo '<hR>UPDATE: '.$sql;
         $rs = $this->dbo->query($sql);
         if ($rs===false){
             throw new Exception('db update error'.get_class($this).' '.var_dump($this->dbo->errorInfo()));

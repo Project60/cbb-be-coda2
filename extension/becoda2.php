@@ -126,7 +126,7 @@ function becoda2_civicrm_options() {
           'values' => array(
               'CODA 2.3 (Belgium)' => array(
                   'label' => 'CODA 2.x Import Plugin',
-                  'value' => 'CRM_Becoda2_Plugin_Becoda2',
+                  'value' => 'CRM_Becoda2_PluginImpl_Becoda2',
                   'is_default' => 0,
               ),
           ),

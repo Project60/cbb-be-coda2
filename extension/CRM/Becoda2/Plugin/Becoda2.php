@@ -24,7 +24,7 @@
  * $Id$
  *
  */
-class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer {
+class CRM_Becoda2_Plugin_Becoda2 extends CRM_Banking_PluginModel_Importer {
 
   /**
    * class constructor
@@ -41,7 +41,7 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer {
    * @return string
    */
   static function displayName() {
-    return 'CODA 2.3 Importer';
+    return 'CODA 2.x Importer';
   }
 
   /**
