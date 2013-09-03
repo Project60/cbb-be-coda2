@@ -50,7 +50,7 @@ class CRM_Becoda2_Plugin_Becoda2 extends CRM_Banking_PluginModel_Importer {
    * @return bool
    */
   static function does_import_files() {
-    return true;
+    return false;
   }
 
   /**
@@ -59,7 +59,7 @@ class CRM_Becoda2_Plugin_Becoda2 extends CRM_Banking_PluginModel_Importer {
    * @return bool
    */
   static function does_import_stream() {
-    return false;
+    return true;
   }
 
   /**

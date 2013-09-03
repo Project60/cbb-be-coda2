@@ -5,6 +5,7 @@ class ProcessCodaFile{
     public $dbo;   
     public $codafiles=array();   //=accountstatements
     public $codafilerecords=array();
+    private $log;
 
     public function __construct() {          
       $this->dbo = project::$codaDBO;
@@ -16,6 +17,7 @@ class ProcessCodaFile{
         $this->codafilerecords = $CodaReader->getCodaRecords();
 //        var_dump($this->codafiles);
 //        var_dump($this->codafilerecords);
+        $this->log = $CodaReader->log;
     }
     
     public function process($file_path){
@@ -38,6 +40,7 @@ class ProcessCodaFile{
                 $codarecord_qs->create();       
             }
         }
+        return $this->log;
     }
     
     protected function get_or_create_codafile($codafile){

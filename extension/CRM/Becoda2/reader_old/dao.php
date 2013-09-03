@@ -172,7 +172,7 @@ class dao{
         $this->setCreated();
         $this->setModified();
         $sql = 'insert into `'.$this->table.'` set '.self::paramstr($this->data, $pk);
-        echo '<hR>CREATE:'.$sql;
+        //echo '<hR>CREATE:'.$sql;
         $rs  = $this->dbo->query($sql);
         if ($rs===false){
             echo '<BR>sql :'.$sql;
@@ -213,7 +213,7 @@ class dao{
         }else{
             $sql .= " where `$pk`=".$id;
         }
-        echo '<hR>UPDATE: '.$sql;
+        //echo '<hR>UPDATE: '.$sql;
         $rs = $this->dbo->query($sql);
         if ($rs===false){
             throw new Exception('db update error'.get_class($this).' '.var_dump($this->dbo->errorInfo()));

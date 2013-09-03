@@ -49,3 +49,14 @@ function becoda2_civicrm_post( $op, $objectName, $objectId, &$objectRef ) {
 function becoda2_civicrm_entityTypes(&$entityTypes) {
   // add my DAO's
 }
+
+function civicrm_banking_format_iban($v) {
+  switch (substr($v,0,2)) {
+    case 'BE' :
+      return substr($v,0,4) . ' ' . substr($v,4,4) . ' ' . substr($v,8,4) . ' ' . substr($v,12,4);
+      break;
+    default:
+      return $v;
+  }
+}
+

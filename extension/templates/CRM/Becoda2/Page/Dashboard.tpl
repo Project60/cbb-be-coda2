@@ -1,57 +1,63 @@
+{literal}<style>
+.row {
+  padding: 4px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin: 0 0 4px 0;
+  }
+.stat {
+  padding: 6px;
+  background-color: #ccc;
+  border-radius: 4px;
+  width: 150px;
+  text-align: center;
+  float: left;
+  }
+.stat span {
+  color: white;
+  font-size: 48px;
+  line-height: 48px;
+  }
+.row .comments {
+  padding: 4px 4px 0px 4px;
+  margin-left: 170px;
+  margin-right: 100px;
+  }
+.row button {
+  float: right;
+  }
+</style>{/literal}
+
 <p>
   This page allows you to monitor and control the CODA import process.
 </p>
 
-
-<div class="crm-block crm-content-block c">
-  <div class="ui-tabs ui-widget ui-widget-content ui-corner-all" id="mainTabContainer">
-    <ul class="crm-contact-tabs-list ui-tabs-nav ui-helper-reset ui-helper-clearfix ui-widget-header ui-corner-all" role="tablist">
-      <li class="crm-tab-button ui-state-default ui-corner-top {if $page eq 'files'}ui-tabs-active ui-state-active{/if}  ui-corner-bottom" id="tab_files" >
-        <a title="Input files" href="?page=files" class="ui-tabs-anchor" >
-          <span> </span> Input files                
-          <em>17</em>
-        </a>
-      </li>
-      <li class="crm-tab-button ui-state-default ui-corner-top {if $page eq 'stmts'}ui-tabs-active ui-state-active{/if} ui-corner-bottom" id="tab_stmts" >
-        <a title="Bank statements to process" href="?page=stmts" class="ui-tabs-anchor" >
-          <span> </span> Bank statements to process                
-          <em>15</em>
-        </a>
-      </li>
-    </ul>
-
-{if $page eq 'files'}
-    <div class="ui-tabs-panel ui-widget-content ui-corner-bottom" >
-      <div class="contactTopBar contact_panel">
-        <div class="contactCardLeft">
-          {foreach from=$fs item=f}
-            <input type="submit" value="Read"> {$f.name} - {$f.when}
-            <br/>
-          {/foreach}
-        </div> <!-- end of left side -->
-        <div class="contactCardRight">
-          Hihi
-        </div> <!-- end of right side -->
-      </div>
+<div>
+  <div class="row">
+    <div class="stat">
+      Files to read
+      <br/>
+      <span>{$filecount}</span>
     </div>
-{/if}
-
-{if $page eq 'stmts'}
-    <div class="ui-tabs-panel ui-widget-content ui-corner-bottom" >
-      <div class="contactTopBar contact_panel">
-        
-        <div class="contactCardLeft">
-          Hoho
-        </div> <!-- end of left side -->
-        <div class="contactCardRight">
-          Hihi
-        </div> <!-- end of right side -->
-      </div>
+    <button onclick="document.location='./files';">Read files</button>
+    <div class="comments clearfix">
+      These are CODA files placed in the inbox/ folder which need to be read. 
     </div>
-{/if}
-    
-    <div class="clear"></div>
   </div>
-  <div class="clear"></div>
+    
+  <div class="row">
+    <div class="stat">
+      Statements to import
+      <br/>
+      <span>{$batchcount}</span>
+    </div>
+    <button onclick="document.location='./batches';">Import statements</button>
+    <div class="comments clearfix">
+      These are individual bank statements to convert into bank transactions. 
+    </div>
+  </div>
 </div>
+
+    
+<div class="clear"></div>
 

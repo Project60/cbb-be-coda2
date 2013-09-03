@@ -23,7 +23,6 @@ class CodaBbanToIban{
 		} else {
 			$bic = $params['bic'];
 		}
-
 		$bban = substr(preg_replace("/\-|\ /", "", $bban), 0, 12);
 
 		$bic = substr(preg_replace("/\ /", "", $bic), 0, 8);
