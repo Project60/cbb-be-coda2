@@ -25,12 +25,9 @@ class settings{
     
     public static function load($classname){
         $path = project::$root;
-        /*
         if(strpos(strtolower($classname), 'coda')!==false){
             $subdir = $path.'/Coda/';
             $res = @include_once $subdir.$classname.'.php';
         }
-         * 
-         */
     }
 }

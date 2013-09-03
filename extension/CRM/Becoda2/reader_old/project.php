@@ -1,5 +1,8 @@
 <?php
 
+require_once 'DBO.php';
+require_once 'dao.php';
+
 class project{
     static $instance;
     static $root;

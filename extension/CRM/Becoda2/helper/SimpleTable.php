@@ -98,7 +98,6 @@ class SimpleTable{
         return $this->fields;
     }
     
-    // $fieldnamemap = array (fieldnamefrom, fieldnameto)
     public function copyfrom(SimpleTable $table, array $fieldnamemap){
         $selectedfields = $table->selectfields(array_keys($fieldnamemap));
         foreach ($selectedfields as $fieldname => $value){

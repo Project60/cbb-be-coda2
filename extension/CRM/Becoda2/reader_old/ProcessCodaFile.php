@@ -1,5 +1,14 @@
 <?php
 
+require_once 'CRM/Becoda2/reader_old/project.php';
+require_once 'CRM/Becoda2/reader_old/settings.php';
+require_once 'CRM/Becoda2/reader_old/DBO.php';
+require_once 'CRM/Becoda2/reader_old/dao.php';
+require_once 'CRM/Becoda2/helper/SimpleTable.php';
+
+require_once 'CRM/Becoda2/reader_old/CodaReader_old.php';
+project::getInstance();
+
 class ProcessCodaFile{
     
     public $dbo;   
@@ -13,9 +22,7 @@ class ProcessCodaFile{
     public function parseFile($file_path){        
         $CodaReader = new CodaReader_old($this->dbo);
         $this->codafiles = $CodaReader->parseFile($file_path);
-        $this->codafilerecords = $CodaReader->getCodaRecords();
-        var_dump($this->codafiles);
-        var_dump($this->codafilerecords);
+        $this->codafilerecords = $CodaReader->getCodaRecords();        
     }
     
     public function process($file_path){
@@ -42,12 +49,14 @@ class ProcessCodaFile{
     
     protected function get_or_create_codafile($codafile){
         $qs = new dao('civicrm_coda_batch', 'codaDBO');
+        /*
         $qs->f('file', $codafile->file)
            ->f('sequence', $codafile->sequence)
-           ->f('date_created_by_bank', $codafile->date_created_by_bank)
-           ->f('source', $codafile->source);
-        //$qs->f('source', $codafile->source)
-        //   ->f('sequence', $codafile->sequence);
+           ->f('date_created_by_bank', $codafile->date_created_by_bank);
+           //->f('source', $codafile->source);         
+         */
+        $qs->f('source', $codafile->source)
+           ->f('sequence', $codafile->sequence);
         $res = $qs->read();        
         $qs->setdata($codafile->getFields());
         $qs->status='NEW';
@@ -55,8 +64,8 @@ class ProcessCodaFile{
             $pkid = $qs->create();
         }else{      
             $pkid = $res[0][$qs->getPK()];
-            $qs->setdata($codafile->getData());
-            $qs->update($pkid);
+            //$qs->setdata($codafile->getData());
+            //$qs->update($pkid);
         }
         return $pkid;
     }

@@ -9,10 +9,7 @@
  *  A codarecord is determinated by the codabatch sequence number, its own sequence number and detailnumber
  * 
  */
-require_once 'DBO.php';
-require_once 'CodaBbanToBic.php';
-require_once 'CodaBbanToIban.php';
-//require_once 'Debug.php';
+require_once 'CRM/Becoda2/helper/SimpleTable.php';
 
 class CodaReader_old{   
     public $codabatches = array();
@@ -20,9 +17,9 @@ class CodaReader_old{
     public $codarecord;
     public $codarecords = array();
     public $codabatchrecords = array();
-    static $codabatchscheme;
-    static $codarecordscheme;
-    public $dbo;
+    
+    static $coda_batch_fields=array('sequence', 'date_created_by_bank', 'name', 'bic', 'bban', 'iban', 'currency', 'country_code', 'starting_balance', 'ending_balance', 'starting_date', 'ending_date', 'source', 'file', 'extra', 'status');
+    static $coda_tx_fields=array('sequence', 'coda_batch', 'value_date', 'booking_date', 'name', 'street', 'streetnr', 'zipcode', 'city', 'country_code', 'bic', 'bban', 'iban', 'currency', 'amount', 'txncode', 'move_struct_code', 'move_msg', 'customer_ref', 'category_purpose', 'purpose', 'move_detail', 'info_struct_code', 'info_msg', 'info_detail', 'creditorid', 'status', 'extra', 'source');
 
     protected $nrRecs;
     protected $_codabatch_extra = array();
@@ -34,15 +31,16 @@ class CodaReader_old{
     //                              'seqnr'=>null,
     //                              'detailnr'=>null);
 
-    public function __construct($dbo) {    //$dbinfo=array('dbname'=>'','host'=>'localhost', 'user'=>'root', 'passw'=>'')
-        $this->dbo = $dbo;
-        self::$codabatchscheme = DBO::getScheme($this->dbo, 'civicrm_coda_batch');
-        self::$codarecordscheme = DBO::getScheme($this->dbo, 'civicrm_coda_tx');
+    public function __construct() {            
         $this->resetmeta();
     }
     
-    public function parse($string){
-		$lines = preg_split('/\n/', $string);		
+    public function parse($file_path){
+		//$lines = preg_split('/\n/', $string);	
+		$file_path = str_replace('\\', '/', $file_path);
+		$lines = file($file_path);		
+		$fileparts = explode('/', $file_path);
+        $this->file = array_pop($fileparts);
 		foreach($lines as $line) {
 			if($line){
                 $identification_record = substr($line, 0, 1);                 
@@ -55,11 +53,13 @@ class CodaReader_old{
 		}		
 		return $this->codabatches;
 	}
-        
+    
+    /*
     public function parseFile($file_path){
         $this->file = $file_path;        
 		return $this->parse(file_get_contents(trim($file_path)));
-	}
+	}    
+     */
     
     protected function processCodaFile($process_record){
 		$identification_record = substr($process_record, 0, 1);       
@@ -133,13 +133,11 @@ class CodaReader_old{
 		}
 	}
     
-    protected function processRecord0($process_record){
-        $scheme_array = self::$codabatchscheme;
-        $fieldlist = array_keys($scheme_array['fields']);
-		$this->codabatch = new SimpleTable('civicrm_coda_batch', $fieldlist, $scheme_array['pk']);	
+    protected function processRecord0($process_record){        
+        $this->codabatch = self::getCodaBatchInstance();
         $this->codabatches[] = $this->codabatch;
-        $this->codabatch->source = $process_record.'/\n/';
-        //$this->codabatch->file = $this->file;        
+		$this->codabatch->status = 'new';		
+        $this->codabatch->file = $this->file;        
         $this->codabatch->date_created_by_bank = $this->convertDate(substr($process_record,5,6));
 		$this->codabatch->bic = trim(substr($process_record, 60, 11));        
         
@@ -188,8 +186,7 @@ class CodaReader_old{
 				$this->codabatch->bban = $bankNumberTemp;
 
 				//create IBAN of Belgium number
-				$filter = new CodaBbanToIban();
-				$this->codabatch->iban = trim($filter->filter(array('bban' => $bankNumberTemp)));               
+				$this->codabatch->iban = self::CodaBbanToIban(array('bban' => $bankNumberTemp));               
 				$this->codabatch->currency = $this->filterWhiteSpace(substr($process_record, 18, 3));
 				$qualificationcode = trim(substr($process_record, 21, 1));
                 if(!empty($qualificationcode) && $qualificationcode!=0){
@@ -255,7 +252,7 @@ class CodaReader_old{
 
 		//get the sequence number of the coda file
 		$this->codabatch->sequence = substr($process_record, 125, 3);
-        $this->codabatch->source .= $process_record.'/\n/';
+        //$this->codabatch->source .= $process_record.'/\n/';
         
         $this->setSequenceFlags(1, true, false, array(21));
 	}
@@ -274,7 +271,7 @@ class CodaReader_old{
 		//get the date of the new balance
 		$tempDate = substr($process_record, 57, 6);
 		$this->codabatch->ending_date = $this->convertDate($tempDate);
-        $this->codabatch->source .= $process_record.'/\n/';
+        //$this->codabatch->source .= $process_record.'/\n/';
 
         if(!empty($this->codabatch->iban)){
             $this->codabatchrecords[$this->codabatch->iban.':'.$this->codabatch->sequence] = $this->arrayCopy($this->codarecords);
@@ -325,11 +322,9 @@ class CodaReader_old{
     }       
 
     protected function processRecord21($process_record){                              
-        
-        $scheme_array = self::$codarecordscheme;
-        $fieldlist = array_keys($scheme_array['fields']);        
-        
-		$this->codarecord = new SimpleTable('civicrm_coda_tx', $fieldlist, $scheme_array['pk']);
+       // $fieldlist = self::$codarecordscheme;                
+		//$this->codarecord = new SimpleTable('civicrm_coda_tx', $fieldlist, 'id');
+        $this->codarecord = self::getCodaTxInstance();
         $this->_codarecord_extra = array();
         $this->codarecord->source = '';
 		$this->codarecords[] = $this->codarecord;       
@@ -371,12 +366,12 @@ class CodaReader_old{
 		$check_Structured = substr($process_record, 61, 1);
 		//$this->codarecord->move_is_structured = $check_Structured;
 		if($check_Structured == 0){
-            $this->codarecord->move_structured_code = '000';
-			$this->codarecord->move_message = $this->filterWhiteSpace(substr($process_record, 62, 53)). " ";
+            $this->codarecord->move_struct_code = '000';
+			$this->codarecord->move_msg = $this->filterWhiteSpace(substr($process_record, 62, 53)). " ";
 		}
 		else{
-			$this->codarecord->move_structured_code = substr($process_record, 62, 3);
-			$this->codarecord->move_message  = $this->filterWhiteSpace(substr($process_record, 65, 50)); 
+			$this->codarecord->move_struct_code = substr($process_record, 62, 3);
+			$this->codarecord->move_msg  = $this->filterWhiteSpace(substr($process_record, 65, 50)); 
 		}
         $this->codarecord->source .= $process_record."\n";
         
@@ -410,11 +405,11 @@ class CodaReader_old{
 	protected function processRecord22($process_record)	{		               
 		//only add whitespace after unstructured message parts
 		$whitespace = "";
-		if($this->codarecord->move_structured_code == 0){
+		if($this->codarecord->move_struct_code == 0){
 			$whitespace = " ";
 		}		
 		//next part of the message
-		$this->codarecord->move_message .= $this->filterWhiteSpace(substr($process_record, 10, 53)) . " ";
+		$this->codarecord->move_msg .= $this->filterWhiteSpace(substr($process_record, 10, 53)) . " ";
         // p 64-98 customer ref or blank
         $this->codarecord->customer_ref = $this->filterWhiteSpace(substr($process_record, 63, 35));
 		//BIC of the bank of the debtor
@@ -452,8 +447,8 @@ class CodaReader_old{
             $this->codarecord->currency = substr($process_record, 23, 3);         			
 
 			//create IBAN of Belgium number
-			$filter = new CodaBbanToIban();
-			$this->codarecord->iban = trim($filter->filter(array('bban' => $bankNumberTemp)));			            
+			//$filter = new CodaBbanToIban();
+			$this->codarecord->iban = trim(self::CodaBbanToIban(array('bban' => $bankNumberTemp)));			            
 
 		}else{
 			//get the bank account number of the coda file
@@ -484,19 +479,19 @@ class CodaReader_old{
 		$this->codarecord->name = $this->filterWhiteSpace(substr($process_record, 47, 35));
 
 		//next part of the message
-		$this->codarecord->move_message .= $this->filterWhiteSpace(substr($process_record, 82, 43));
+		$this->codarecord->move_msg .= $this->filterWhiteSpace(substr($process_record, 82, 43));
         
         //SDD structured message
-		$move_message = $this->codarecord->move_message;			
-		if($this->codarecord->move_structured_code == '127'){   
-            //$this->codarecord->debitDate = $this->convertDate(substr($move_message, 0, 6));
-			$this->_codarecord_extra['debitDate'] = $this->convertDate(substr($move_message, 0, 6));			
-			$this->_codarecord_extra['debitType'] = substr($move_message, 6, 1);
-			$this->_codarecord_extra['debitScheme'] = substr($move_message, 7, 1);
-			$this->_codarecord_extra['debitStatus'] = substr($move_message, 8, 1);			
-			$this->_codarecord_extra['creditorId'] = substr($move_message, 9, 35);
-			$this->_codarecord_extra['mandateRef'] = trim(substr($move_message, 44, 35));
-			$this->_codarecord_extra['debitCommunication'] = substr($move_message, 79, 65);
+		$move_msg = $this->codarecord->move_msg;			
+		if($this->codarecord->move_struct_code == '127'){   
+            //$this->codarecord->debitDate = $this->convertDate(substr($move_msg, 0, 6));
+			$this->_codarecord_extra['debitDate'] = $this->convertDate(substr($move_msg, 0, 6));			
+			$this->_codarecord_extra['debitType'] = substr($move_msg, 6, 1);
+			$this->_codarecord_extra['debitScheme'] = substr($move_msg, 7, 1);
+			$this->_codarecord_extra['debitStatus'] = substr($move_msg, 8, 1);			
+			$this->_codarecord_extra['creditorId'] = substr($move_msg, 9, 35);
+			$this->_codarecord_extra['mandateRef'] = trim(substr($move_msg, 44, 35));
+			$this->_codarecord_extra['debitCommunication'] = substr($move_msg, 79, 65);
             $this->codarecord->extra = json_encode($this->_codarecord_extra);
 		}
         $this->codarecord->source .= $process_record."\n";
@@ -511,11 +506,11 @@ class CodaReader_old{
 		$check_structured = substr($process_record, 39, 1);
        // $this->codarecord->info_is_structured = $check_structured;
 		if($check_structured == 0){
-            $this->codarecord->info_structured_code = '000';
-			$this->codarecord->info_message = $this->filterWhiteSpace(substr($process_record, 40, 73))." ";
+            $this->codarecord->info_struct_code = '000';
+			$this->codarecord->info_msg = $this->filterWhiteSpace(substr($process_record, 40, 73))." ";
 		}else{
-			$this->codarecord->info_structured_code = substr($process_record, 40, 3);
-			$this->codarecord->info_message  = $this->filterWhiteSpace(substr($process_record, 43, 70))." ";
+			$this->codarecord->info_struct_code = substr($process_record, 40, 3);
+			$this->codarecord->info_msg  = $this->filterWhiteSpace(substr($process_record, 43, 70))." ";
 		}
         $this->codarecord->source .= $process_record."\n";
         
@@ -535,31 +530,31 @@ class CodaReader_old{
 	protected function processRecord32($process_record){                
 		$regex = "/\d/";
 		$regex1 = "/^([0-9]*)/";                       
-		$streetname_number = trim($this->filterWhiteSpace(substr($process_record, 10, 35)));        
+		$street_number = trim($this->filterWhiteSpace(substr($process_record, 10, 35)));        
 		$zipcode_city = $this->filterWhiteSpace(substr($process_record, 45, 70));
 
-		$this->codarecord->info_message  .= $streetname_number." ".$zipcode_city." ";
+		$this->codarecord->info_msg  .= $street_number." ".$zipcode_city." ";
 
 		$tempArray = array();
 		preg_match($regex1, $zipcode_city, $tempArray);
 
-		//length of the string postal_code and cut the postal_code out of the string
+		//length of the string zipcode and cut the zipcode out of the string
 		$zip = substr($zipcode_city, 0, strlen($tempArray[0]));
 		$city = trim(substr($zipcode_city, strlen($tempArray[0])));
         if($zip>=1000 && $zip<9999){
-            $this->codarecord->postal_code = $zip;
+            $this->codarecord->zipcode = $zip;
         }
         if(strlen($city)>2){
             $this->codarecord->city = $city;
         }		
         
         
-		//check if there is an streetname given and a streetnumber
-		if((!is_null($streetname_number)) || !empty($streetname_number)){
+		//check if there is an street given and a streetnr
+		if((!is_null($street_number)) || !empty($street_number)){
 			//get the address, split them up and place the values in the fields
-            $streetname_number = str_replace(array(',','/HOME'), ' ', $streetname_number);
-            $streetname_number = $this->filterWhiteSpace(str_replace(explode(' ',$zipcode_city), '', $streetname_number));
-			$pieces = explode(' ', $streetname_number);            
+            $street_number = str_replace(array(',','/HOME'), ' ', $street_number);
+            $street_number = $this->filterWhiteSpace(str_replace(explode(' ',$zipcode_city), '', $street_number));
+			$pieces = explode(' ', $street_number);            
 			$length_pieces = count($pieces);           
             $number='';
 
@@ -570,10 +565,10 @@ class CodaReader_old{
                         unset($pieces[$i]);
                     }
                 }
-                $this->codarecord->streetnumber = trim(str_replace('//','/',$number),' /');
+                $this->codarecord->streetnr = trim(str_replace('//','/',$number),' /');
                 $sname = trim(implode(' ',$pieces), ' /');
                 if(strlen($sname)>2){
-                    $this->codarecord->streetname = $sname;
+                    $this->codarecord->street = $sname;
                 }
                 
             }elseif(self::hasNumber($pieces[$length_pieces-1]) || strlen($pieces[$length_pieces-1])<3){
@@ -585,10 +580,10 @@ class CodaReader_old{
                     }elseif($top==''){
                         continue;
                     }else{
-                        $this->codarecord->streetnumber = $this->filterWhiteSpace(str_replace('//','/',$number),' /');
+                        $this->codarecord->streetnr = $this->filterWhiteSpace(str_replace('//','/',$number),' /');
                         $sname = trim(implode(' ',$pieces).' '.$top,' /');
                         if(strlen($sname)>2){
-                            $this->codarecord->streetname = $sname;
+                            $this->codarecord->street = $sname;
                         }                      
                         break;
                     }
@@ -598,8 +593,8 @@ class CodaReader_old{
                     }
 
                 }                    
-            }elseif(strpos(strtolower($streetname_number), strtolower($this->codarecord->name))===false){
-                $this->codarecord->streetname = implode(' ', $pieces);
+            }elseif(strpos(strtolower($street_number), strtolower($this->codarecord->name))===false){
+                $this->codarecord->street = implode(' ', $pieces);
             }                          			
 		}        
 
@@ -614,7 +609,7 @@ class CodaReader_old{
 
 	protected function processRecord33($process_record){               
 		//next part of the message
-		$this->codarecord->info_message .= $this->filterWhiteSpace(substr($process_record, 10, 90));
+		$this->codarecord->info_msg .= $this->filterWhiteSpace(substr($process_record, 10, 90));
         $this->codarecord->source .= $process_record."\n";
         
         //check
@@ -677,9 +672,11 @@ class CodaReader_old{
     protected function testSequence($code){
         if ($this->meta['nextcode']===true && !in_array($code, $this->meta['expect'])){
             //testing throw new Exception("Coda format error : artcode=$code ; expected next code in".  var_dump($possible_next));
+			echo '<BR>'."Coda format error : artcode=$code ; expected next code in".  var_dump($possible_next);
         }
         if ($this->meta['linkcode']===true && ($code!=31)){
            // throw new Exception("Coda format error : artcode=$code ; expected next code=31");
+			echo '<BR>'."Coda format error : artcode=$code ; expected next code=31";
         }
     }
     
@@ -752,4 +749,59 @@ class CodaReader_old{
             return false;
         }
     }
+    
+    public static function getCodaBatchInstance(){
+        return new SimpleTable('civicrm_coda_batch', self::$coda_batch_fields, 'id');
+    }
+    
+    public static function getCodaTxInstance(){
+        return new SimpleTable('civicrm_coda_tx', self::$coda_tx_fields, 'id');
+    }
+
+    public static function CodaBbanToIban($params){
+		if(empty($params['bban'])){
+			return null;
+		}
+		$bban = $params['bban'];
+		if(!array_key_exists('bic', $params) || empty($params['bic'])){
+			//$filter = new CodaBbanToBic();
+			$bic = self::CodaBbanToBic($bban);
+		} else {
+			$bic = $params['bic'];
+		}
+		$bban = substr(preg_replace("/\-|\ /", "", $bban), 0, 12);
+		$bic = substr(preg_replace("/\ /", "", $bic), 0, 8);
+		$countrycode = substr($bic, 4, 2);
+		$tempban = $bban . $countrycode . "00";
+		$patternArray = array("/A/","/B/","/C/","/D/","/E/","/F/","/G/","/H/","/I/","/J/",
+				"/K/","/L/","/M/","/M/","/N/","/O/","/P/","/Q/","/R/","/S/","/T/","/U/",
+				"/V/","/W/","/X/","/Y/","/Z/");
+
+		$replaceArray = range(10, 35);
+
+		//alfa waarden($patternArray) vervangen met numerieke($replaceArray)
+		$tempban = preg_replace($patternArray, $replaceArray, $tempban);
+
+		//modulo 97 aftrekken van 98
+		$mod = 98 - (bcmod($tempban, "97"));
+		if(strLen($mod)==1){
+			$mod = "0" . $mod;
+		}
+
+		$iban = $countrycode . $mod . $bban;
+
+		return trim($iban);
+	}
+	
+	public static function CodaBbanToBic($bban){
+		$bankidnumber = substr($bban, 0, 3);
+        $sql = 'select * from bic where T_Identification_Number="'.mysql_real_escape_string($bankidnumber).'"';
+		$bic = CRM_Core_DAO::executeQuery($sql);
+        $res = $bic->fetch();		
+		if(!$res) {
+			throw new Exception("Couldn't find BIC for BBAN: $bban");
+		}
+        $biccode = $res->Biccode;
+		return $biccode;
+	}
 }
