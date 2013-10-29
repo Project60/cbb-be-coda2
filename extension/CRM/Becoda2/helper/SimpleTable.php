@@ -24,6 +24,7 @@ class SimpleTable{
         if (array_key_exists($name, $this->fields)){
             return $this->fields[$name];
         }else{
+			var_dump($name);
             throw new Exception('field :'.$name.' does not exists');
         }
     }
@@ -98,7 +99,6 @@ class SimpleTable{
         return $this->fields;
     }
     
-    // $fieldnamemap = array (fieldnamefrom, fieldnameto)
     public function copyfrom(SimpleTable $table, array $fieldnamemap){
         $selectedfields = $table->selectfields(array_keys($fieldnamemap));
         foreach ($selectedfields as $fieldname => $value){
