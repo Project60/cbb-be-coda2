@@ -6,16 +6,4 @@
     <title>Dashboard</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
-  <item>
-    <path>civicrm/coda2/files</path>
-    <page_callback>CRM_Becoda2_Page_CodaFiles</page_callback>
-    <title>CodaFiles</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
-  <item>
-    <path>civicrm/coda2/batches</path>
-    <page_callback>CRM_Becoda2_Page_CodaBatch</page_callback>
-    <title>CodaBatch</title>
-    <access_arguments>access CiviCRM</access_arguments>
-  </item>
 </menu>
