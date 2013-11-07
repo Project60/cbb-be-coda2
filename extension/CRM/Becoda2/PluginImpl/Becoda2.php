@@ -216,9 +216,9 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer{
 			$this->_current_transaction_batch_attributes['ba_ref'] = $codabatch->$type;
 		}		
 		
-        // set status Out of Sync or new
-		/*
+        // set status Out of Sync or new		
 		//todo add status field to bank_tx_batch ?
+		
         $bank_tx_batch->status = 'new';	       
 		$prev_seq_btxb = self::getPrevBankTxBatch($bank_tx_batch->issue_date, $bank_tx_batch->sequence, $this->_ba_id);        
 		if(!empty($prev_seq_btxb)){
@@ -226,14 +226,9 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer{
 				$bank_tx_batch->status = 'oos';
 			}
 		}		 
-		 */
-		
+				 				        
         
-        
-        $this->_current_transaction_batch->save();
-        
-        
-        
+        $this->_current_transaction_batch->save();                        
     }
     
     /**
@@ -287,7 +282,7 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer{
         $this->_current_transaction_batch->save();
         
         $btxb = $this->_current_transaction_batch;
-       /*		
+		
 	    //todo add status field to bank_tx_batch ?
 		$next_seq_btxb = self::getNextBankTxBatch($btxb->issue_date, $btxb->sequence, $this->_ba_id);		
 		if(!empty($next_seq_btxb)){
@@ -306,9 +301,7 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer{
 			$dao->save();
                    
 		}
-	    * 
-	    */
-
+	   
       } else if ($this->_current_transaction_batch_attributes['isnew']) {
         // since thif ($this->_current_transaction_batch_attributes['isnew']) {e batch object had to be created in order to get the ID, we would have to
         //  delete it here, if the user didn't want to keep it.

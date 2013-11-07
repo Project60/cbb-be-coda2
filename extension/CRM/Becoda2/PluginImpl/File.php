@@ -39,7 +39,7 @@ class CRM_Becoda2_PluginImpl_File {
     protected $codabatchrecords = array();
     
     static $coda_batch_fields = array('sequence', 'date_created_by_bank', 'name', 'bic', 'bban', 'iban', 'currency', 'country_code', 'starting_balance', 'ending_balance', 'starting_date', 'ending_date', 'source', 'file', 'extra', 'status', 'count_codarecords');    
-	static $coda_tx_fields = array('coda_batch_id', 'sequence', 'coda_batch', 'value_date', 'booking_date', 'name', 'street', 'streetnr', 'zipcode', 'city', 'country_code', 'bic', 'bban', 'iban', 'currency', 'amount', 'txncode', 'move_struct_code', 'move_msg', 'customer_ref', 'category_purpose', 'purpose', 'move_detail', 'info_struct_code', 'info_msg', 'info_detail', 'creditorid', 'status', 'extra', 'source');
+	static $coda_tx_fields = array('coda_batch_id', 'sequence', 'coda_batch', 'value_date', 'booking_date', 'name', 'street', 'streetnr', 'streetsuff', 'zipcode', 'city', 'country_code', 'bic', 'bban', 'iban', 'currency', 'amount', 'txncode', 'move_struct_code', 'move_msg', 'customer_ref', 'category_purpose', 'purpose', 'move_detail', 'info_struct_code', 'info_msg', 'info_detail', 'creditorid', 'status', 'extra', 'source');
     protected $nrRecs;
     protected $_codabatch_extra = array();
     protected $_codarecord_extra = array();
@@ -221,7 +221,7 @@ class CRM_Becoda2_PluginImpl_File {
 		$this->codabatch->bic = trim(substr($process_record, 60, 11));        
         
         $this->_codabatch_extra = array();
-        $idnr = $this->filterWhiteSpace(substr($process_record, 71, 11));   //id v i belg gevestigde rekhouder : 0+ondernemersnr
+        $idnr = self::filterWhiteSpace(substr($process_record, 71, 11));   //id v i belg gevestigde rekhouder : 0+ondernemersnr
         if(!empty($idnr) && $idnr!=0){
             $this->_codabatch_extra['ondernemingsnummber'] = $idnr;
         }
@@ -230,15 +230,15 @@ class CRM_Becoda2_PluginImpl_File {
             $this->_codabatch_extra['separate_application'] = $sepappl;
         }
  
-        $txref = $this->filterWhiteSpace(substr($process_record, 88,16));        
+        $txref = self::filterWhiteSpace(substr($process_record, 88,16));        
         if(!empty($txref)){
             $this->_codabatch_extra['transaction_reference'] = $txref;
         }
-        $txrel = $this->filterWhiteSpace(substr($process_record, 104, 16));
+        $txrel = self::filterWhiteSpace(substr($process_record, 104, 16));
         if(!empty($txref)){
             $this->_codabatch_extra['related_reference'] = $txref;
         }
-        $fileref = $this->filterWhiteSpace(substr($process_record, 24, 10));
+        $fileref = self::filterWhiteSpace(substr($process_record, 24, 10));
         if(!empty($fileref)){
             $this->_codabatch_extra['file_ref'] = $fileref;
         }
@@ -259,7 +259,7 @@ class CRM_Becoda2_PluginImpl_File {
 		//0 = belgian account   :    1 = foreign account
 		//2 = IBAN of belgian   :    3 = IBAN of foreign
 		//different structures of bankaccountnumbers
-		
+		$this->codabatch->country_code = 'BE';
 		switch(substr($process_record, 1, 1)){
 			case 0:				
 				$bankNumberTemp = substr($process_record, 5, 12);
@@ -270,22 +270,23 @@ class CRM_Becoda2_PluginImpl_File {
 					$this->codabatch->iban = $this->CodaBbanToIban(array('bban' => $bankNumberTemp));
 				}
 				     				
-				$this->codabatch->currency = $this->filterWhiteSpace(substr($process_record, 18, 3));			
+				$this->codabatch->currency = self::filterWhiteSpace(substr($process_record, 18, 3));			
 				$qualificationcode = trim(substr($process_record, 21, 1));
                 if(!empty($qualificationcode) && $qualificationcode!=0){
                     $this->_codabatch_extra['qualificationcode'] = $qualificationcode;
                 }
-				$this->codabatch->country_code = $this->filterWhiteSpace(substr($process_record, 22, 2));					
-				$extensionzone = $this->filterWhiteSpace($this->filterWhiteSpace(substr($process_record, 27, 15)));   
+				//$this->codabatch->country_code = self::filterWhiteSpace(substr($process_record, 22, 2));						
+				$extensionzone = self::filterWhiteSpace(self::filterWhiteSpace(substr($process_record, 27, 15)));   
                 if(!empty($extensionzone)){
                     $this->_codabatch_extra['extensionzone'] = $extensionzone;
                 }
                 $this->_codabatch_extra['bank_account_structure'] = 'bban';				 
 				break;
 
-			case 1:				
+			case 1:	
+				$this->codabatch->country_code = null;
 				$this->codabatch->bban = substr($process_record, 5, 34);
-				$this->codabatch->currency = $this->filterWhiteSpace(substr($process_record, 39, 3));
+				$this->codabatch->currency = self::filterWhiteSpace(substr($process_record, 39, 3));
                 $this->_codabatch_extra['bank_account_structure'] = 'foreign';				
 				break;
 
@@ -296,9 +297,9 @@ class CRM_Becoda2_PluginImpl_File {
 				//creates belgium number of iban
 				settype($bankNumberTemp, "string");   
 
-				$this->codabatch->bban = $this->filterWhiteSpace(substr($bankNumberTemp, 4));
-				////$this->codabatch->extensionzone = $this->filterWhiteSpace(substr($process_record, 36, 3));
-				$this->codabatch->currency = $this->filterWhiteSpace(substr($process_record, 39, 3));   
+				$this->codabatch->bban = self::filterWhiteSpace(substr($bankNumberTemp, 4));
+				////$this->codabatch->extensionzone = self::filterWhiteSpace(substr($process_record, 36, 3));
+				$this->codabatch->currency = self::filterWhiteSpace(substr($process_record, 39, 3));   
                 $this->_codabatch_extra['bank_account_structure'] = 'be iban';
 				$this->codabatch->country_code = 'BE';				
 				break;
@@ -306,8 +307,9 @@ class CRM_Becoda2_PluginImpl_File {
 			case 3:
 				//get the bank account number of the coda file
 				$this->codabatch->iban = trim(substr($process_record, 5, 34));
+				$this->codabatch->country_code = substr($this->codabatch->iban, 0 ,2);
 				//currency code
-				$this->codabatch->currency = $this->filterWhiteSpace(substr($process_record, 39, 3));
+				$this->codabatch->currency = self::filterWhiteSpace(substr($process_record, 39, 3));
                 $this->_codabatch_extra['bank_account_structure'] = 'foreign iban';				
 				break;
 
@@ -332,7 +334,7 @@ class CRM_Becoda2_PluginImpl_File {
 		$this->codabatch->starting_date = $this->convertDate($tempDate);
 		
 		//name account holder
-		$this->codabatch->name = $this->filterWhiteSpace(substr($process_record, 64, 26));
+		$this->codabatch->name = self::filterWhiteSpace(substr($process_record, 64, 26));
 
 		//get the sequence number of the coda file
 		$this->codabatch->sequence = substr($process_record, 125, 3);
@@ -383,7 +385,7 @@ class CRM_Becoda2_PluginImpl_File {
         }else{
             $this->setSequenceFlags(4, true, false, array(9));
         }
-        $this->_codabatch_extra['free_communication'] = $this->filterWhiteSpace(substr($process_record, 32, 80));
+        $this->_codabatch_extra['free_communication'] = self::filterWhiteSpace(substr($process_record, 32, 80));
 	}
     
     //eindopname : test ; aantal geg opnames ; debetomzet ; creditomzet
@@ -448,11 +450,11 @@ class CRM_Becoda2_PluginImpl_File {
 		$check_Structured = substr($process_record, 61, 1);
 		if($check_Structured == 0){
             $this->codarecord->move_struct_code = '000';
-			$this->codarecord->move_msg = $this->filterWhiteSpace(substr($process_record, 62, 53)). " ";
+			$this->codarecord->move_msg = self::filterWhiteSpace(substr($process_record, 62, 53)). " ";
 		}
 		else{
 			$this->codarecord->move_struct_code = substr($process_record, 62, 3);
-			$this->codarecord->move_msg  = $this->filterWhiteSpace(substr($process_record, 65, 50)); 
+			$this->codarecord->move_msg  = self::filterWhiteSpace(substr($process_record, 65, 50)); 
 		}
         $this->codarecord->source .= $process_record."\n";
         
@@ -490,14 +492,14 @@ class CRM_Becoda2_PluginImpl_File {
 			$whitespace = " ";
 		}		
 		//next part of the message
-		$this->codarecord->move_msg .= $this->filterWhiteSpace(substr($process_record, 10, 53)) . " ";
+		$this->codarecord->move_msg .= self::filterWhiteSpace(substr($process_record, 10, 53)) . " ";
         // p 64-98 customer ref or blank
-        $this->codarecord->customer_ref = $this->filterWhiteSpace(substr($process_record, 63, 35));
+        $this->codarecord->customer_ref = self::filterWhiteSpace(substr($process_record, 63, 35));
 		//BIC of the bank of the debtor
 		$this->codarecord->bic = trim(substr($process_record, 98, 11));
         // p118-121 purpose
-        $this->codarecord->category_purpose = $this->filterWhiteSpace(substr($process_record, 117, 4));
-        $this->codarecord->purpose = $this->filterWhiteSpace(substr($process_record, 121, 4));
+        $this->codarecord->category_purpose = self::filterWhiteSpace(substr($process_record, 117, 4));
+        $this->codarecord->purpose = self::filterWhiteSpace(substr($process_record, 121, 4));
         $this->codarecord->source .= $process_record."\n";    
         
         //check
@@ -530,7 +532,7 @@ class CRM_Becoda2_PluginImpl_File {
 
 		}else{
 			//get the bank account number of the coda file
-			$bankNumberTemp = $this->filterWhiteSpace(substr($process_record, 10, 37));
+			$bankNumberTemp = self::filterWhiteSpace(substr($process_record, 10, 37));
 
 			$pieces = explode(" ", $bankNumberTemp);                           
 
@@ -540,7 +542,7 @@ class CRM_Becoda2_PluginImpl_File {
 			}else{
 				$this->codarecord->iban = trim($pieces[0]);
                 if (isset($pieces[1]))
-                    $this->codarecord->currency = trim($pieces[1]);      
+                    $this->codarecord->currency = trim($pieces[1]);  				
 			}
 
 			//creates belgium number of iban
@@ -553,15 +555,16 @@ class CRM_Becoda2_PluginImpl_File {
 			
 			
 		}
-		if(!empty($this->codarecord->bban)){
-			$this->codarecord->country_code = 'BE';
+		$this->codarecord->country_code = 'BE';
+		if(!empty($this->codarecord->iban)){
+			$this->codarecord->country_code = substr($this->codarecord->iban, 0,2);
 		}
 
 		//get the name of the one that has done the transfer
-		$this->codarecord->name = $this->filterWhiteSpace(substr($process_record, 47, 35));			
+		$this->codarecord->name = self::filterWhiteSpace(substr($process_record, 47, 35));			
 
 		//next part of the message
-		$this->codarecord->move_msg .= $this->filterWhiteSpace(substr($process_record, 82, 43));
+		$this->codarecord->move_msg .= self::filterWhiteSpace(substr($process_record, 82, 43));
         
         //SDD structured message
 		$move_msg = $this->codarecord->move_msg;			
@@ -591,10 +594,10 @@ class CRM_Becoda2_PluginImpl_File {
 		$check_structured = substr($process_record, 39, 1);
 		if($check_structured == 0){
             $this->codarecord->info_struct_code = '000';
-			$this->codarecord->info_msg = $this->filterWhiteSpace(substr($process_record, 40, 73))." ";
+			$this->codarecord->info_msg = self::filterWhiteSpace(substr($process_record, 40, 73))." ";
 		}else{
 			$this->codarecord->info_struct_code = substr($process_record, 40, 3);
-			$this->codarecord->info_msg  = $this->filterWhiteSpace(substr($process_record, 43, 70))." ";			
+			$this->codarecord->info_msg  = self::filterWhiteSpace(substr($process_record, 43, 70))." ";			
 		}
         $this->codarecord->source .= $process_record."\n";
         
@@ -615,7 +618,7 @@ class CRM_Becoda2_PluginImpl_File {
 	}
 
 	protected function parseRecord32($process_record){ 
-		$this->codarecord->info_msg  .= $this->filterWhiteSpace(substr($process_record, 10, 105));				
+		$this->codarecord->info_msg  .= self::filterWhiteSpace(substr($process_record, 10, 105));				
         $this->codarecord->source .= $process_record."\n";   
 		
         //check
@@ -626,7 +629,12 @@ class CRM_Becoda2_PluginImpl_File {
 		//todo move this to a neutral place
 		switch ($this->codarecord->info_struct_code) {
 			case '001':
-				$this->parseAddressInfoMsg($process_record);
+				$address = $this->parseAddressInfoMsg($process_record);
+				$this->codarecord->zipcode = $address['postal_code'];
+				$this->codarecord->city = $address['city'];
+				$this->codarecord->streetsuff = $address['street_number_suffix'];
+				$this->codarecord->streetnr = $address['street_number'];
+				$this->codarecord->street = $address['street_name'];				
 				break;
 
 			default:
@@ -637,7 +645,7 @@ class CRM_Becoda2_PluginImpl_File {
 
 	protected function parseRecord33($process_record){               
 		//next part of the message
-		$this->codarecord->info_msg .= $this->filterWhiteSpace(substr($process_record, 10, 90));
+		$this->codarecord->info_msg .= self::filterWhiteSpace(substr($process_record, 10, 90));
         $this->codarecord->source .= $process_record."\n";
         
         //check
@@ -646,78 +654,70 @@ class CRM_Becoda2_PluginImpl_File {
 				
 	}
 	
-	protected function parseAddressInfoMsg($process_record){
-		$regex = "/\d/";
-		$regex1 = "/^([0-9]*)/";                       
-		$street_number = trim($this->filterWhiteSpace(substr($process_record, 10, 35)));        
-		$zipcode_city = $this->filterWhiteSpace(substr($process_record, 45, 70));
-		
-		$tempArray = array();
-		preg_match($regex1, $zipcode_city, $tempArray);
-
-		//length of the string zipcode and cut the zipcode out of the string
-		$zip = substr($zipcode_city, 0, strlen($tempArray[0]));
-		$city = trim(substr($zipcode_city, strlen($tempArray[0])));
-        if($zip>=1000 && $zip<9999){	//!!! todo foreign zips as well
-            $this->codarecord->zipcode = $zip;
-        }
-        if(strlen($city)>2){
-            $this->codarecord->city = $city;
-        }		
-        
-        
-		//check if there is an street given and a streetnr
-		if((!is_null($street_number)) || !empty($street_number)){
-			//get the address, split them up and place the values in the fields
-            $street_number = str_replace(array(',','/HOME'), ' ', $street_number);
-            $street_number = $this->filterWhiteSpace(str_replace(explode(' ',$zipcode_city), '', $street_number));
-			$pieces = explode(' ', $street_number);            
-			$length_pieces = count($pieces);           
-            $number='';
-
-            if(self::hasNumber($pieces[0]) || strlen($pieces[0])<2){
-                foreach($pieces as $i=>$part){
-                    if(self::hasNumber($part)){ // || strlen($part)<2
-                        $number .= $part.' ';
-                        unset($pieces[$i]);
-                    }
-                }
-                $this->codarecord->streetnr = trim(str_replace('//','/',$number),' /');
-                $sname = trim(implode(' ',$pieces), ' /');
-                if(strlen($sname)>2){
-                    $this->codarecord->street = $sname;
-                }
-                
-            }elseif(self::hasNumber($pieces[$length_pieces-1]) || strlen($pieces[$length_pieces-1])<3){
-                while(1){
-                    $top = array_pop($pieces);
-                    $strl = strtolower($top);
-                    if(self::hasNumber($top) || strlen($top)<3 || $strl=='bus' || $strl=='bis' || $strl=='gvl'){
-                        $number = trim($top.' '.$number);
-                    }elseif($top==''){
-                        continue;
-                    }else{
-                        $this->codarecord->streetnr = $this->filterWhiteSpace(str_replace('//','/',$number),' /');
-                        $sname = trim(implode(' ',$pieces).' '.$top,' /');
-                        if(strlen($sname)>2){
-                            $this->codarecord->street = $sname;
-                        }                      
-                        break;
-                    }
-                    if(is_null($top)){
-                        //echo '<BR>'.'top is null !!!!';
-                        break;
-                    }
-
-                }                    
-            }elseif(strpos(strtolower($street_number), strtolower($this->codarecord->name))===false){
-                $this->codarecord->street = implode(' ', $pieces);
-            }                          			
-		}        
-
+	public static function parseAddressInfoMsg($process_record){     
+		$streetstr = trim(self::filterWhiteSpace(substr($process_record,0,35)));     
+		$original = $streetstr;
+		$zipcode_city = trim(self::filterWhiteSpace(substr($process_record,35,70)));
+		$parts = explode(' ', $zipcode_city);
+		$zip = array_shift($parts);
+		//$land = 'BE';
+		if(strtolower(self::top($parts))=='nederland'){		//tochange
+			//$land = 'NL';
+			array_pop($parts);
+		}
+		foreach($parts as $i=>$part){
+			if(substr($part,0,1)=='('){
+				unset($parts[$i]);
+			}
+		}
+		$city = implode(' ',$parts);
+		$repl = array(',', '/');
+		$streetstr = trim(self::filterWhiteSpace(str_replace($repl, ' ', $streetstr)));
+		$parts = explode(' ', $streetstr);
+		$cnt = count($parts);
+		$streetname = $streetnr = $streetsuffix = '';
+		if($cnt>0){
+			$first = $parts[0];			
+			if(self::hasNumber($first)){			// first streetnr then streetname
+				$streetnr = array_shift($parts);
+				$streetsuffixar = array();
+				foreach($parts as $i=>$part){
+					if(self::hasNumber($part) || in_array(strtolower($part),array('a','b','c','d','e','f','bus','boite'))){
+						$streetsuffixar[] = $part;
+						unset($parts[$i]);
+					}else{
+						break;
+					}
+				}
+				$streetsuffix = implode(' ', $streetsuffixar);
+				$streetname = implode(' ', $parts);				
+			}else{									// streetnr part last
+				$streetar=array();
+				foreach($parts as $i=>$part){
+					if(self::hasNumber($part)&& !empty($streetar)){
+						break;
+					}else{
+						$streetar[] = $part;
+						unset($parts[$i]);
+					}
+				}
+				$streetname = implode(' ',$streetar);
+				$streetnr = array_shift($parts);
+				$streetsuffix = implode(' ',$parts);				
+			}
+		}		
+		return array(
+			'address_string'=> $process_record,
+			'street_address'=>(empty($streetname)?null:trim(self::filterWhiteSpace($streetname.' '.$streetnr.' '.$streetsuffix))),
+			'street_name'=>empty($streetname)?null:$streetname,
+			'street_number'=>empty($streetnr)?null:$streetnr,
+			'street_number_suffix'=>empty($streetsuffix)?null:substr($streetsuffix,0,8),
+			'postal_code'=>empty($zip)?null:$zip,
+			'city'=>empty($city)?null:$city,
+		);		
 	}
-
-		protected function getSeqNr($line){
+	
+	protected function getSeqNr($line){
         return substr($line, 2, 4);
     }
 
@@ -807,7 +807,7 @@ class CRM_Becoda2_PluginImpl_File {
         }
     }
 
-    public function filterWhiteSpace($string){
+    public static function filterWhiteSpace($string){
 		$pattern = array("/^\s+/", "/\s{2,}/", "/\s+\$/");
 		$replace = array("", " ", "");
 		return preg_replace($pattern, $replace, $string);
@@ -833,15 +833,7 @@ class CRM_Becoda2_PluginImpl_File {
         }
         return $result;
     }
-    
-    public static function hasNumber($str){
-        if (preg_match('#[0-9]#',$str)){
-            return true;
-        }else{
-            return false;
-        }
-    }
-    
+       
     public static function getCodaBatchInstance(){
         return new SimpleTable('civicrm_coda_batch', self::$coda_batch_fields, 'id');
     }
@@ -901,6 +893,23 @@ class CRM_Becoda2_PluginImpl_File {
 		}
         $biccode = $bic->Biccode;
 		return trim($biccode);
-	}     
+	}    
+	
+	public static function top(array $ar){
+		$cnt = count($ar);
+		if($cnt>0){
+			return $ar[$cnt-1];
+		}else{
+			return null;
+		}
+	}
+	
+	public static function hasNumber($str){
+        if (preg_match('#[0-9]#',$str)){
+            return true;
+        }else{
+            return false;
+        }
+    }
     
 }
