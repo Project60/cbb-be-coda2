@@ -1,4 +1,5 @@
 <?php
+
 /*
  * From the CODA specification : 
  * 
@@ -24,8 +25,6 @@
  * It aso needs to process the record types 2 and 3 representing movements.
  */
 
-require_once 'CRM/Becoda2/helper/SimpleTable.php';
-
 class CRM_Becoda2_PluginImpl_File {
 	/*
 	 * Contains the full pathname of the file being processed
@@ -35,14 +34,13 @@ class CRM_Becoda2_PluginImpl_File {
     protected $codabatches = array();
     protected $codabatch;
     protected $codarecord;
-    protected $codarecords = array();
+    public $codarecords = array();
     protected $codabatchrecords = array();
     
     static $coda_batch_fields = array('sequence', 'date_created_by_bank', 'name', 'bic', 'bban', 'iban', 'currency', 'country_code', 'starting_balance', 'ending_balance', 'starting_date', 'ending_date', 'source', 'file', 'extra', 'status', 'count_codarecords');    
-	static $coda_tx_fields = array('coda_batch_id', 'sequence', 'coda_batch', 'value_date', 'booking_date', 'name', 'street', 'streetnr', 'streetsuff', 'zipcode', 'city', 'country_code', 'bic', 'bban', 'iban', 'currency', 'amount', 'txncode', 'move_struct_code', 'move_msg', 'customer_ref', 'category_purpose', 'purpose', 'move_detail', 'info_struct_code', 'info_msg', 'info_detail', 'creditorid', 'status', 'extra', 'source');
+	static $coda_tx_fields = array('sequence', 'coda_batch', 'value_date', 'booking_date', 'name', 'street', 'streetnr', 'streetsuff', 'zipcode', 'city', 'country_code', 'bic', 'bban', 'iban', 'currency', 'amount', 'txcode', 'move_struct_code', 'move_msg', 'customer_ref', 'category_purpose', 'purpose', 'move_detail', 'info_struct_code', 'info_msg', 'source', 'purpose_data', 'sub_lines', 'info', 'identification_code');
     protected $nrRecs;
     protected $_codabatch_extra = array();
-    protected $_codarecord_extra = array();
     protected $meta=array('nextcode'=>null, 
                           'linkcode'=>null, 
                           'code'=>null, 
@@ -56,12 +54,13 @@ class CRM_Becoda2_PluginImpl_File {
 		'bban2iban'=>0,
 		'bic_table'=>'civicrm_bank_bic',
 	); 
-	public function __construct($file_path, $config=array()) {		
+	
+	public function __construct($file_path, $config=array()) {				
         $this->resetmeta();
 		if(!empty($config)){
 			$this->config = array_merge($this->config, $config);
 		}
-        $this->_pathname = $file_path;
+        $this->_pathname = $file_path;		
         $this->parse($file_path);
     }
     
@@ -84,7 +83,7 @@ class CRM_Becoda2_PluginImpl_File {
 		}else{			
 			$type = 'bban';
 		}
-		$this->_key = $codabatch->$type.':'.$codabatch->sequence;		
+		$this->_key = $codabatch->$type.':'.$codabatch->sequence;					
         return $codabatch;
     }
     
@@ -110,10 +109,10 @@ class CRM_Becoda2_PluginImpl_File {
         $coda_tx->coda_batch = $this->_key;
 		return $coda_tx;
 	}
-    
-    protected function parse($file_path){	
+		
+	public function parse($file_path){			
 		$file_path = str_replace('\\', '/', $file_path);
-		$lines = file($file_path);		
+		$lines = file($file_path);	
 		$fileparts = explode('/', $file_path);
         $this->file = array_pop($fileparts);
 		foreach($lines as $line) {
@@ -126,19 +125,15 @@ class CRM_Becoda2_PluginImpl_File {
                 }                				
 			}
 		}		
-		//return $this->codabatches;
 	}   
 	
-	//temp
 	public function getCodaFiles(){
 		return $this->codabatches;
 	}
 
-	//temp
 	public function getCodaRecords(){
 		return $this->codabatchrecords;
 	}
-
 	      
     protected function processCodaFile($process_record){
 		$identification_record = substr($process_record, 0, 1);       
@@ -251,7 +246,7 @@ class CRM_Becoda2_PluginImpl_File {
          *  : 71,11
          */
         $this->codarecords = array();
-        $this->setSequenceFlags(0, true, false, array(1));		
+        $this->setSequenceFlags(0, true, false, array(1));			
 	}
 
 	protected function parseRecord1($process_record){
@@ -339,7 +334,7 @@ class CRM_Becoda2_PluginImpl_File {
 		//get the sequence number of the coda file
 		$this->codabatch->sequence = substr($process_record, 125, 3);
         //$this->codabatch->source .= $process_record.'/\n/';
-        
+		
         $this->setSequenceFlags(1, true, false, array(21));
 	}
 
@@ -358,6 +353,57 @@ class CRM_Becoda2_PluginImpl_File {
 		$this->codabatch->ending_date = $this->convertDate($tempDate);
         //$this->codabatch->source .= $process_record.'/\n/';
 		$key = $this->codabatch->iban;
+		
+		// post process codarecords
+		// collect sub lines of a codarecord on txcode(type:1,family:2,tx:2,category:3)
+		$tmp = array();
+		$type_codes = array(0,1,2,3);
+		foreach($this->codarecords as &$rec){
+			$sequence = $rec->sequence;			
+			$move_detail = $rec->move_detail;												
+			$move_struct_code = $rec->move_struct_code;
+			
+			$parse_move_msg_method = 'parse'.$move_struct_code;
+			if(method_exists($this, $parse_move_msg_method)){
+				$rec->purpose_data = $this->$parse_move_msg_method($rec->move_msg);
+			}else{
+				$rec->purpose_data = self::filterWhiteSpace($rec->move_msg);
+			}
+						
+			$parse_info_msg_method = 'parseInfo'.$rec->info_struct_code;
+			if(method_exists($this, $parse_info_msg_method)){
+				$rec->info = $this->$parse_info_msg_method($rec->info_msg);
+			}
+			//process sub_lines see 'Coding of the transactions' in the manual
+			$type_txcode = substr($rec->txcode,0,1);	
+			if(in_array($type_txcode, $type_codes)){
+				$tmp[$sequence.':'.$move_detail] = $rec;
+				$prev_rec = &$tmp[$sequence.':'.$move_detail];
+			}else{
+				$slines = $prev_rec->sub_lines;
+				if(!isset($slines) || empty($slines)){
+					$prev_rec->sub_lines = array();					
+				}
+				$prev_rec->sub_lines[] = array(
+					'sequence'=>$rec->sequence,
+					'move_detail'=>$rec->move_detail,
+					'move_struct_code'=>$rec->move_struct_code,
+					'move_msg'=>$rec->move_msg,	
+					'value_date'=>$rec->value_date,
+					'booking_date'=>$rec->booking_date,
+					'currency'=>$rec->currency,
+					'amount'=>$rec->amount,
+					'txcode'=>$rec->txcode,
+					'customer_ref'=>$rec->customer_ref,									
+					'purpose_data'=>$rec->purpose_data,	
+					'info'=>$rec->info,
+				);
+				
+			}
+		}
+		
+		$this->codarecords = $tmp;
+		
         if(!empty($key)){
             $this->codabatchrecords[$this->codabatch->iban.':'.$this->codabatch->sequence] = $this->arrayCopy($this->codarecords);
         }else{
@@ -396,20 +442,21 @@ class CRM_Becoda2_PluginImpl_File {
             throw new Exception('Wrong number of process records ; counted :'.$this->nrRecs.' expected :'.$nrrecs);
         }
         $mf = substr($process_record, 127, 1);
+		
         if($mf!=1){
-            //$this->_codabatch_extra['multiple_file_code'] = $mf;
-        }
+            $this->_codabatch_extra['multiple_file_code'] = $mf;
+        }		 
+		
         $this->codabatch->count_codarecords = count($this->codarecords);                
         
         $this->_codabatch_extra['debit_movement'] = number_format(substr($process_record,22, 12).'.'.substr($process_record, 34, 2), 2, '.', ''); 
         $this->_codabatch_extra['credit_movement'] = number_format(substr($process_record,37, 12).'.'.substr($process_record, 49, 2), 2, '.', '');
-        $this->codabatch->extra = json_encode($this->_codabatch_extra);		
-        
+        //$this->codabatch->extra = json_encode($this->_codabatch_extra);		
+		$this->codabatch->extra = $this->_codabatch_extra;		       
     }       
 
     protected function parseRecord21($process_record){                                     
         $this->codarecord = self::getCodaTxInstance();
-        $this->_codarecord_extra = array();
         $this->codarecord->source = '';
 		$this->codarecords[] = $this->codarecord;       
 		
@@ -442,7 +489,7 @@ class CRM_Becoda2_PluginImpl_File {
 		$transactionsCategory = substr($process_record, 58, 3);
        // end verrichtingscode
         
-       $this->codarecord->txncode = $transactionstype.
+       $this->codarecord->txcode = $transactionstype.
                                     $transactionsfamily.
                                     $transactionstransaction.
                                     $transactionsCategory;
@@ -450,11 +497,13 @@ class CRM_Becoda2_PluginImpl_File {
 		$check_Structured = substr($process_record, 61, 1);
 		if($check_Structured == 0){
             $this->codarecord->move_struct_code = '000';
-			$this->codarecord->move_msg = self::filterWhiteSpace(substr($process_record, 62, 53)). " ";
+			//$this->codarecord->move_msg = self::filterWhiteSpace(substr($process_record, 62, 53)). " ";
+			$this->codarecord->move_msg = substr($process_record, 62, 53);
 		}
 		else{
 			$this->codarecord->move_struct_code = substr($process_record, 62, 3);
-			$this->codarecord->move_msg  = self::filterWhiteSpace(substr($process_record, 65, 50)); 
+			//$this->codarecord->move_msg  = self::filterWhiteSpace(substr($process_record, 65, 50)); 
+			$this->codarecord->move_msg  = substr($process_record, 65, 50); 
 		}
         $this->codarecord->source .= $process_record."\n";
         
@@ -485,14 +534,9 @@ class CRM_Becoda2_PluginImpl_File {
         $this->setNumbering($newseqnr, $newdetailnr);
 	}
 
-	protected function parseRecord22($process_record)	{		               
-		//only add whitespace after unstructured message parts
-		$whitespace = "";
-		if($this->codarecord->move_struct_code == 0){
-			$whitespace = " ";
-		}		
+	protected function parseRecord22($process_record)	{		               				
 		//next part of the message
-		$this->codarecord->move_msg .= self::filterWhiteSpace(substr($process_record, 10, 53)) . " ";
+		$this->codarecord->move_msg .= substr($process_record, 10, 53);
         // p 64-98 customer ref or blank
         $this->codarecord->customer_ref = self::filterWhiteSpace(substr($process_record, 63, 35));
 		//BIC of the bank of the debtor
@@ -564,40 +608,26 @@ class CRM_Becoda2_PluginImpl_File {
 		$this->codarecord->name = self::filterWhiteSpace(substr($process_record, 47, 35));			
 
 		//next part of the message
-		$this->codarecord->move_msg .= self::filterWhiteSpace(substr($process_record, 82, 43));
-        
-        //SDD structured message
-		$move_msg = $this->codarecord->move_msg;			
-		if($this->codarecord->move_struct_code == '127'){   			
-            //$this->codarecord->debitDate = $this->convertDate(substr($move_msg, 0, 6));
-			$this->_codarecord_extra['debitDate'] = $this->convertDate(substr($move_msg, 0, 6));			
-			$this->_codarecord_extra['debitType'] = substr($move_msg, 6, 1);
-			$this->_codarecord_extra['debitScheme'] = substr($move_msg, 7, 1);
-			$this->_codarecord_extra['debitStatus'] = substr($move_msg, 8, 1);			
-			$this->_codarecord_extra['creditorId'] = substr($move_msg, 9, 35);
-			$this->_codarecord_extra['mandateRef'] = trim(substr($move_msg, 44, 35));
-			$this->_codarecord_extra['debitCommunication'] = substr($move_msg, 79, 65);      
-			                  
-		}		
-        $this->codarecord->source .= $process_record."\n";
-		
-		$this->codarecord->extra = json_encode($this->_codarecord_extra);
-
+		//$this->codarecord->move_msg .= self::filterWhiteSpace(substr($process_record, 82, 43));
+		$this->codarecord->move_msg .= substr($process_record, 82, 43);               						
+        $this->codarecord->source .= $process_record."\n";		
 		
         //check
         $isnextinfo = (bool)substr($process_record,127,1);  //rec31
         $this->setSequenceFlags(23, false, $isnextinfo, array(31));
 	}
 
-	protected function parseRecord31($process_record){            
+	protected function parseRecord31($process_record){    
 		//get the detailNumber of the infoArticle		
 		$check_structured = substr($process_record, 39, 1);
 		if($check_structured == 0){
             $this->codarecord->info_struct_code = '000';
-			$this->codarecord->info_msg = self::filterWhiteSpace(substr($process_record, 40, 73))." ";
+			//$this->codarecord->info_msg = self::filterWhiteSpace(substr($process_record, 40, 73))." ";
+			$this->codarecord->info_msg = substr($process_record, 40, 73);
 		}else{
 			$this->codarecord->info_struct_code = substr($process_record, 40, 3);
-			$this->codarecord->info_msg  = self::filterWhiteSpace(substr($process_record, 43, 70))." ";			
+			//
+			$this->codarecord->info_msg = substr($process_record, 43, 70);			
 		}
         $this->codarecord->source .= $process_record."\n";
         
@@ -618,7 +648,8 @@ class CRM_Becoda2_PluginImpl_File {
 	}
 
 	protected function parseRecord32($process_record){ 
-		$this->codarecord->info_msg  .= self::filterWhiteSpace(substr($process_record, 10, 105));				
+		//$this->codarecord->info_msg  .= self::filterWhiteSpace(substr($process_record, 10, 105));				
+		$this->codarecord->info_msg  .= substr($process_record, 10, 105);				
         $this->codarecord->source .= $process_record."\n";   
 		
         //check
@@ -634,7 +665,8 @@ class CRM_Becoda2_PluginImpl_File {
 				$this->codarecord->city = $address['city'];
 				$this->codarecord->streetsuff = $address['street_number_suffix'];
 				$this->codarecord->streetnr = $address['street_number'];
-				$this->codarecord->street = $address['street_name'];				
+				$this->codarecord->street = $address['street_name'];
+				$this->codarecord->identification_code = self::filterWhiteSpace(substr($this->codarecord->info_msg, -35));
 				break;
 
 			default:
@@ -645,7 +677,8 @@ class CRM_Becoda2_PluginImpl_File {
 
 	protected function parseRecord33($process_record){               
 		//next part of the message
-		$this->codarecord->info_msg .= self::filterWhiteSpace(substr($process_record, 10, 90));
+		//$this->codarecord->info_msg .= self::filterWhiteSpace(substr($process_record, 10, 90));
+		$this->codarecord->info_msg .= substr($process_record, 10, 90);
         $this->codarecord->source .= $process_record."\n";
         
         //check
@@ -655,14 +688,11 @@ class CRM_Becoda2_PluginImpl_File {
 	}
 	
 	public static function parseAddressInfoMsg($process_record){     
-		$streetstr = trim(self::filterWhiteSpace(substr($process_record,0,35)));     
-		$original = $streetstr;
-		$zipcode_city = trim(self::filterWhiteSpace(substr($process_record,35,70)));
+		$streetstr = trim(self::filterWhiteSpace(substr($process_record,10,35)));   
+		$zipcode_city = trim(self::filterWhiteSpace(substr($process_record,45,70)));
 		$parts = explode(' ', $zipcode_city);
 		$zip = array_shift($parts);
-		//$land = 'BE';
 		if(strtolower(self::top($parts))=='nederland'){		//tochange
-			//$land = 'NL';
 			array_pop($parts);
 		}
 		foreach($parts as $i=>$part){
@@ -835,11 +865,13 @@ class CRM_Becoda2_PluginImpl_File {
     }
        
     public static function getCodaBatchInstance(){
-        return new SimpleTable('civicrm_coda_batch', self::$coda_batch_fields, 'id');
+        //return new SimpleTable('civicrm_coda_batch', self::$coda_batch_fields, 'id');
+		return (object) array_fill_keys(self::$coda_batch_fields, null);
     }
     
     public static function getCodaTxInstance(){
-        return new SimpleTable('civicrm_coda_tx', self::$coda_tx_fields, 'id');
+        //return new SimpleTable('civicrm_coda_tx', self::$coda_tx_fields, 'id');
+		return (object) array_fill_keys(self::$coda_tx_fields, null);
     }
 
     protected function CodaBbanToIban($params){
@@ -912,4 +944,545 @@ class CRM_Becoda2_PluginImpl_File {
         }
     }
     
+	/*
+	* methods move_struct_code parsing
+	*/
+	
+	// Payment with a structured format communication : structured creditor reference to remittance information
+	protected function parse100($move_msg){
+		$data = array(
+			'creditor_struct_ref' => substr($move_msg, 0, 21),
+		);
+		return $data;
+	}
+
+	// Credit transfer or cash payment with structured format communication
+	protected function parse101($move_msg){
+		$data = array(
+			'txtype' => 'CC',	// CreditCard transfer or cash payment with struct format communication
+			'struct_communication' => substr($move_msg,0,10).' '.  substr($move_msg, 10, 2),	// 10 + 2 (digit 97)
+		);
+		return $data;
+	}
+	
+	// Credit transfer or cash payment with reconstituted structured format communication
+	protected function parse102($move_msg){
+		$data = array(
+			'txtype' => 'CC',	// CreditCard transfer or cash payment with struct format communication
+			'struct_communication' => substr($move_msg,0,10).' '.  substr($move_msg, 10, 2),	// 10 + 2 (digit 97)
+		);
+		return $data;
+	}
+	
+	// number (cheque, card, ...)
+	protected function parse103($move_msg){
+		$data = array(
+			'txtype' => 'number',	
+			'number' => substr($move_msg, 0 ,12),
+		);	
+		return $data;
+	}
+
+	// original amount of the transaction
+	protected function parse105($move_msg){
+		$data = array(
+			'gross_amount' => floatval(substr($move_msg, 0, 14))/100,
+			'gross_amount_original_curr' => floatval(substr($move_msg, 15, 14))/100,
+			'currency' => substr($move_msg, 30, 3),
+			'struct_communication' => substr($move_msg, 33, 12),
+			'country_code' => substr($move_msg, 45, 2),
+			'amount_eur' => floatval(substr($move_msg, 47, 14)/100),
+		);	
+		return $data;
+	}
+	
+	// Method of calculation (VAT, withholding taax on income, commission, ...
+	protected function parse106($move_msg){
+		$data = array(
+			'amount' => floatval(substr($move_msg, 0, 14))/100,
+			'amount_perc' => floatval(substr($move_msg, 15, 14))/100,
+			'percent' => floatval(substr($move_msg, 30, 4).'.'.  substr($move_msg, 34, 8)),
+			'minimum' => (substr($move_msg, 42, 1)==1)?true:false,
+			'amount_eur' => floatval(substr($move_msg, 43, 14))/100,			
+		);
+		return $data;
+	}
+
+	// Direct debit - DOM'80
+	protected function parse107($move_msg){
+		$data=array(
+			'txtype' => 'DOM80',
+			'direct_debit_nr' => substr($move_msg, 0, 12),                      // direct debit number
+			'central_date' => $this->convertDate(substr($move_msg, 12, 6)),	      // YYYY-MM-DD
+			'msg' => self::filterWhiteSpace(substr($move_msg, 18, 30)),	      // communication zone
+			'paid_or_refused' => substr($move_msg, 48, 1),	                              // paid or reason for refusal
+			'creditor_nr' => self::filterWhiteSpace(substr($move_msg, 49, 11)), // creditor's number'
+		);	
+		switch ($data['paid_or_refused']) {
+			case 0:
+				$data['paid_or_refused'] = 'paid';
+				break;
+			case 1:
+				$data['paid_or_refused'] = 'dd cancelled or non-existent';
+				break;
+			case 2:
+				$data['paid_or_refused'] = 'refusal - other reason';
+				break;
+			case 'D':
+				$data['paid_or_refused'] = 'payer disagrees';
+				break;
+			case 'E':
+				$data['paid_or_refused'] = 'dd nr linked to another id nr of the creditor';
+				break;
+			default:
+				break;
+		}
+		return $data;
+	}
+	
+	// Closing
+	protected function parse108($move_msg){
+		$data = array(
+			'txtype' => 'CLOSING',
+			'amount' => floatval(substr($move_msg, 0 , 14))/100,
+			'interest_rates' => substr($move_msg, 15, 15),
+			'interest' => floatval(substr($move_msg, 30, 4).'.'.substr($move_msg, 34, 8)),
+			'from_date' => $this->convertDate(substr($move_msg, 42, 6)),
+			'till_date' => $this->convertDate(substr($move_msg, 48, 6)),
+			
+		);
+		return $data;
+	}
+	
+	// POS credit - Globalisation
+	protected function parse111($move_msg){
+		$data = array(
+			'txtype' => 'POS-credit-globalisation',
+			'cardtype' => substr($move_msg, 0, 1),
+			'POS_nr' => substr($move_msg, 1, 6),
+			'period_nr' => substr($move_msg, 7, 3),
+			'seqnr_first_tx' => substr($move_msg, 10, 6),
+			'date_first_tx' => $this->convertDate(substr($move_msg, 16, 6)),
+			'seqnr_last_tx' => substr($move_msg, 22, 6),
+			'date_last_tx' => $this->convertDate(substr($move_msg, 28, 6)),
+			'type' => substr($move_msg, 24,1),
+			'terminal_id' => self::filterWhiteSpace(substr($move_msg, 25, 26)),	// (name 16, locality 10)
+		);
+
+		switch ($data['cardtype']) {
+			case 1:
+				$data['cardtype'] = 'Bankcontact';
+				break;
+			case 2:
+				$data['cardtype'] = 'Private';
+				break;
+			case 3:
+				$data['cardtype'] = 'Maestro';
+				break;
+			case 5:
+				$data['cardtype'] = 'TINA';
+			case 9:
+				$data['cardtype'] = 'Other';
+				break;
+			default:
+				break;
+		}
+		
+		switch ($data['type']){
+			case 0:
+				$data['type'] = 'cumulative';
+				break;
+			case 1:
+				$data['type'] = 'withdrawal';
+				break;
+			case 2:
+				$data['type'] = 'cumulative on network';
+				break;
+			case 7:
+				$data['type'] = 'distrib';
+				break;
+			case 9:
+				$data['type'] = 'fuel';
+				break;
+		}
+		return $data;
+	}
+	
+	// ATM/POS debit
+	protected function parse113($move_msg){
+		$data = array(
+			'txtype' => 'AMT/POS_debit',
+			'cardnr' => substr($move_msg, 0, 16),
+			'cardtype' => substr($move_msg, 16, 1),
+			'terminal_nr' => self::filterWhiteSpace(substr($move_msg, 17, 6)),
+			'sequence' => substr($move_msg, 23, 6),
+			'date' => $this->convertDate(substr($move_msg, 29, 6)),
+			'hour' => substr($move_msg, 35, 2).':'.  substr($move_msg, 37, 2),
+			'type' => substr($move_msg, 39, 1),
+			'terminal_id' => self::filterWhiteSpace(substr($move_msg, 40, 26)),		// name 16, locality 10
+			'amount' => floatval(substr($move_msg, 66, 14))/100,	// original amount
+			'rate' => floatval(substr($move_msg, 81, 4).'.'.  substr($move_msg, 85, 8)),
+			'currency' => substr($move_msg, 93, 3),
+			'volume' => substr($move_msg, 96, 3)=='   '?null:substr($move_msg, 96, 3).'.'.substr($move_msg, 99, 2),
+			'prod_code' => self::filterWhiteSpace(substr($move_msg, 101, 2)),
+			'unit_price' => substr($move_msg, 103, 2)=='  '?null:substr($move_msg, 103, 2).'.'.  substr($move_msg, 105, 3)
+			
+		);
+		switch ($data['cardtype']) {
+			case 1:
+				$data['cardtype'] = 'Bankcontact';
+				break;
+			case 2:
+				$data['cardtype'] = 'Maestro';
+				break;
+			case 3:
+				$data['cardtype'] = 'Private';
+				break;			
+			case 9:
+				$data['cardtype'] = 'Other';
+				break;
+			default:
+				break;
+		}
+		
+		switch ($data['type']){			
+			case 1:
+				$data['type'] = 'withdrawal';
+				break;
+			case 2:
+				$data['type'] = 'proton loading';
+				break;
+			case 3:
+				$data['type'] = 'reimbursement proton balance';
+				break;
+			case 4:
+				$data['type'] = 'reversal of purchases';
+				break;
+			case 7:
+				$data['type'] = 'distribution sector';
+				break;
+			case 8:
+				$data['type'] = 'teledata';
+				break;
+			case 9:
+				$data['type'] = 'fuel';
+				break;
+		}
+		switch ($data['prod_code']) {
+			case '01':
+				$data['prod_code'] = 'premium with lead substitute';
+				break;
+			case '02':
+				$data['prod_code'] = 'europremium';
+				break;
+			case '03':
+				$data['prod_code'] = 'diesel';
+				break;
+			case '04':
+				$data['prod_code'] = 'LPG';
+				break;
+			case '06':
+				$data['prod_code'] = 'premium plus 98oct';
+				break;
+			case '07':
+				$data['prod_code'] = 'regular unleaded';
+				break;			
+			case '08':
+				$data['prod_code'] = 'domestic fuel oil';
+				break;
+			case '09':
+				$data['prod_code'] = 'lubricants';
+				break;
+			case '10':
+				$data['prod_code'] = 'petrol';
+				break;
+			case '11':
+				$data['prod_code'] = 'premium 99+';
+				break;
+			case '12':
+				$data['prod_code'] = 'Avgas';
+				break;
+			case '16':
+				$data['prod_code'] = 'other types';
+				break;
+			default:
+				break;
+		}
+		return $data;
+	}
+
+	// POS credit - individual tx
+	protected function parse114($move_msg){
+		$data = array(
+			'cardtype' => substr($move_msg, 0, 1),
+			'POS_nr' => substr($move_msg, 1, 6),
+			'period_nr' => substr($move_msg, 7, 3),
+			'sequence' => substr($move_msg, 10, 6),
+			'date' => $this->convertDate(substr($move_msg, 16, 6)),
+			'hour' => substr($move_msg, 22, 2).':'.substr($move_msg, 24, 2),
+			'type' => substr($move_msg, 26, 1),
+			'terminal_id' => self::filterWhiteSpace(substr($move_msg, 27, 26)),	// name 16, town/city 10
+			'tx_ref' => substr($move_msg, 53, 16),
+		);
+		switch ($data['cardtype']) {
+			case 1:
+				$data['cardtype'] = 'Bankcontact';
+				break;
+			case 2:
+				$data['cardtype'] = 'Maestro';
+				break;
+			case 3:
+				$data['cardtype'] = 'Private';
+				break;
+			case 5:
+				$data['cardtype'] = 'TINA';
+			case 9:
+				$data['cardtype'] = 'Other';
+				break;
+			default:
+				break;
+		}
+		
+		switch($data['type']){
+			case 1:
+				$data['type'] = 'withdrawal';
+				break;
+			case 7:
+				$data['type'] = 'distribution sector';
+				break;
+			case 8:
+				$data['type'] = 'teledata';
+				break;
+			case 9:
+				$data['type'] = 'fuel';
+				break;
+		}
+		return $data;
+	}
+	
+	// Fees and commissions
+	protected function parse123($move_msg){
+		$data = array(
+			'starting_date' => $this->convertDate(substr($move_msg, 0 ,6)),
+			'maturity_date' => (substr($move_msg, 6, 6)=='999999')?null:$this->convertDate(substr($move_msg, 6 ,6)),
+			'amount' => floatval(substr($move_msg, 12, 14))/100,
+			'percentage' => floatval(substr($move_msg, 27, 4).'.'.substr($move_msg, 31, 8)),
+			'term_days' => substr($move_msg, 39, 4),
+			'minimum' => substr($move_msg, 33, 1)==1?true:false,
+			'guarantee_nr' => substr($move_msg, 34, 13),
+		);
+		return $data;
+	}
+
+	protected function parse127($move_msg){
+		$data = array(
+			'txtype' => 'SDD',
+			'debitDate' => $this->convertDate(substr($move_msg, 0, 6)),	// settelment date
+			'debitType' => substr($move_msg, 6, 1),					    // Type Direct Debit			  
+			'debitScheme' => substr($move_msg, 7, 1),                   // Direct Debit scheme
+			'debitStatus' => substr($move_msg, 8, 1),				    // Paid or reason for refused payment
+			'creditorId' => $this->filterWhiteSpace(substr($move_msg, 9, 35)),					// Creditor's identification code
+			'mandateRef' => $this->filterWhiteSpace(substr($move_msg, 44, 35)),
+			'debitCommunication'=> self::filterWhiteSpace(substr($move_msg, 79, 62)),
+			'R_tx_type' => substr($move_msg, 141, 1),					// type of R transaction
+			'reasonCode' => self::filterWhiteSpace(substr($move_msg, 142, 4)),
+		);
+		
+		switch($data['debitType']){
+			case 0:
+				$data['debitType'] = 'unspecified';
+				break;
+			case 1:
+				$data['debitType'] = 'recurrenct';
+				break;
+			case 2:
+				$data['debitType'] = 'one-off';
+				break;
+			case 3:
+				$data['debitType'] = '1-st (recur)';
+				break;
+			case 4:
+				$data['debitType'] = 'last (recur)';
+				break;
+		}
+		
+		switch ($data['debitScheme']) {
+			case 0:
+				$data['debitScheme'] = 'unspecified';
+				break;
+			case 1:
+				$data['debitScheme'] = 'SEPA core';
+				break;
+			case 2: 
+				$data['debitScheme'] = 'SEPA B2B';
+				break;
+			default:
+				break;
+		}
+		
+		switch ($data['debitStatus']){
+			case 0:
+				$data['debitStatus'] = 'paid';
+				break;
+			case 1:
+				$data['debitStatus'] = 'technical problem';
+				break;
+			case 2:
+				$data['debitStatus'] = 'unspecified';
+				break;
+			case 3:
+				$data['debitStatus'] = 'debtor disagrees';
+				break;
+			case 4:
+				$data['debitStatus'] = 'debtor account problem';
+				break;
+		}
+		
+		switch ($data['R_tx_type']) {
+			case 0:
+				$data['R_tx_type'] = 'paid';				
+				break;
+			case 1:
+				$data['R_tx_type'] = 'reject';
+				break;
+			case 2:
+				$data['R_tx_type'] = 'return';
+				break;
+			case 3:
+				$data['R_tx_type'] = 'refund';
+				break;
+			case 4:
+				$data['R_tx_type'] = 'reversal';
+				break;
+			case 5:
+				$data['R_tx_type'] = 'cancellation';
+				break;
+		}
+		return $data;
+	}
+	
+	// parse structured info message
+	
+	// Message from the bank
+	protected function parseInfo002($info_msg){
+		$data = array(
+			'info_type' => 'bank message',
+			'msg' => $this->filterWhiteSpace($info_msg),				
+		);
+		return $data;
+	}
+	
+	// Counterparty's banker'
+	protected function parseInfo004($info_msg){
+		$data = array(
+			'info_type' => 'bank counterparty',
+			'msg' => $this->filterWhiteSpace($info_msg),				
+		);
+		return $data;
+	}
+	
+	// Data concerning the correspondent
+	protected function parseInfo005($info_msg){
+		$data = array(
+			'info_type' => 'correspondent',
+			'msg' => $info_msg,
+		);
+		return $data;
+	}
+	
+	// Information concerning the detail amount
+	protected function parseInfo006($info_msg){
+		$data = array(
+			'info_msg' => 'amount detail',
+			'description' => $this->filterWhiteSpace(substr($info_msg, 0, 30)),
+			'currency' => $this->filterWhiteSpace(substr($info_msg, 30, 3)),
+			'amount' => (substr($info_msg($info_msg, 48, 1))==0?1:-1)*floatval(substr($info_msg, 33, 14))/100,
+			'category' => $this->filterWhiteSpace(substr($info_msg, 49, 3))
+		);
+		return $data;
+	}
+	
+	// Information concerning the detail cash
+	protected function parseInfo007($info_msg){
+		$data = array(
+			'info_type' => 'cash detail',
+			'nr' => $this->filterWhiteSpace(substr($info_msg, 0, 7)),	// Number of notes/coins
+			'denomination' => $this->filterWhiteSpace(substr($info_msg, 7, 6)),	// Note/coin denomination
+			'total_amount' => floatval(substr($info_msg, 13, 14))/100,
+		);
+		return $data;
+	}
+	
+	// Identification of the de ultimate beneficiary/creditor (SEPA SCT/SDD)
+	protected function parseInfo008($info_msg){
+		$data = array(
+			'info_type' => 'creditor_id',	
+			'name' => $this->filterWhiteSpace(substr($info_msg, 0, 70)),
+			'id' => $this->filterWhiteSpace(substr($info_msg, 70, 35)),
+		);
+		return $data;
+	}
+	
+	// Identification of the de ultimate customer/debtor (SEPA SCT/SDD)
+	protected function parseInfo009($info_msg){
+		$data = array(
+			'info_type' => 'debtor_id',
+			'name' => $this->filterWhiteSpace(substr($info_msg, 0, 70)),
+			'id' => $this->filterWhiteSpace(substr($info_msg, 70, 35)),
+		);
+		return $data;
+	}
+	
+	// Information pertaining to sale or purchase of securities
+	protected function parseInfo010($info_msg){
+		$data = array(
+			'info_type' => 'securities',
+			'order_nr' => $this->filterWhiteSpace(substr($info_msg, 0, 13)),
+			'securities_ref' => $this->filterWhiteSpace(substr($info_msg, 13, 15)),
+			'customer_ref' => $this->filterWhiteSpace(substr($info_msg, 28, 13)),
+			'securities_type' => substr($info_msg, 51, 2),
+			'securities_code' => substr($info_msg, 53, 15),
+			'method' => substr($info_msg, 68, 1)=='N'?'nominal':'per unit',
+			'nr' => substr($info_msg, 69, 12),
+			'issue_currency' => substr($info_msg, 81, 3),
+			'securities_per_tx_unit' => substr($info_msg, 84, 4),
+			'quotation_currency' => substr($info_msg, 88, 3),
+			'stock_exchange_rate' => substr($info_msg, 91, 12),	//floatval ?
+			'exchange_rate_quotations'=>substr($info_msg, 103, 12),
+			'security_name' => $this->filterWhiteSpace(substr($info_msg, 115, 40)),
+			'bordereau_nr'=> $this->filterWhiteSpace(substr($info_msg, 155, 13)),
+			'coupon_nr'=>  $this->filterWhiteSpace(substr($info_msg, 168, 8)),
+			'coupon_payment_day' => $this->filterWhiteSpace(substr($info_msg, 174, 8)),
+			'market' => $this->filterWhiteSpace(substr($info_msg, 182, 30)),
+			'date' => $this->convertDate(substr($info_msg, 212, 8)),
+			'nature' => $this->filterWhiteSpace(substr($info_msg, 220, 24)),
+			'nominal_value' => floatval(substr($info_msg, 244, 14))/100,				
+		);
+		return $data;
+	}
+	
+	// Information pertaining to coupons
+	protected function parseInfo($info_msg){
+		$data = array(
+			'info_type' => 'coupons',
+			'order_nr' => $this->filterWhiteSpace(substr($info_msg, 0, 13)),
+			'securities_ref' => $this->filterWhiteSpace(substr($info_msg, 13, 15)),
+			'customer_ref' => $this->filterWhiteSpace(substr($info_msg, 28, 13)),
+			'securities_type' => substr($info_msg, 51, 2),
+			'securities_code' => substr($info_msg, 53, 15),
+			'nr' => substr($info_msg, 68, 12),
+			'security_name' => $this->filterWhiteSpace(substr($info_msg, 80, 40)),
+			'issue_currency' => substr($info_msg, 120, 3),
+			'coupon_amount' => substr($info_msg, 123, 14),//floatval(substr($info_msg, 123, 14))/1000000,
+			'amount_type' => substr($info_msg, 137, 1)==1?'divident':'interest',
+			'foreign_tax_rate' => floatval(substr($info_msg, 138, 14))/100,
+			'nature' => $this->filterWhiteSpace(substr($info_msg, 153, 24)),
+			'coupon_nr' => $this->filterWhiteSpace(substr($info_msg, 177, 6)),
+			'date' => $this->convertDate(substr($info_msg, 183, 8)),
+			'exchange_rate' => substr($info_msg, 191, 12),
+			'currency' => substr($info_msg, 203, 3),
+			'nominal_value' => floatval(substr($info_msg, 206, 14))/100,
+		);
+		return $data;
+	}
 }
