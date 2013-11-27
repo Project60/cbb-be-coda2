@@ -81,50 +81,52 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer{
      * physical file. Each CODA file corresponds to a separate batch of 
      * transactions.
      */
-    function import_file($file_path, $params=array()) {                
-        $config = $this->_plugin_config;        
+    function import_file($file_path, $params=array()) {   		
+        $config = $this->_plugin_config;    		
         $this->reportProgress(0.0, sprintf("Starting to read file '%s'...", $file_path));
 
-        $cf = new CRM_Becoda2_PluginImpl_File($file_path, $params);
-
+        $cf = new CRM_Becoda2_PluginImpl_File($file_path, $params);		
         while ($btxb = $cf->nextBatch()) {   
-            $this->openTransactionBatch_CodaBatch($btxb);
-                        
+            $this->openTransactionBatch_CodaBatch($btxb);                        
             while ($btx = $cf->nextRecord()) {
-                
+                //var_dump($btx);
                 $this->addBtx($btx);
-            }
-            
+            }            
             $this->closeTransactionBatch(true);
         }
-
         $this->reportDone();
     }
     
     public function addBtx($coda_tx){                    
         $data_raw=array(
             'name'=>$coda_tx->name,            
-            'info_msg'=>$coda_tx->info_msg,                  
+            'info_msg'=>$coda_tx->info_msg,  
+			'move_msg'=>$coda_tx->move_msg,
         );
         $data_parsed = array(
             'name'=>$coda_tx->name,
-            'street_address'=>$coda_tx->street.' '.$coda_tx->streetnr,
+            'street_address'=>trim($coda_tx->street.' '.$coda_tx->streetnr),
             'postal_code'=>$coda_tx->zipcode,
             'city'=>$coda_tx->city,
+			'identification_code'=>$coda_tx->identification_code,
             'bic'=>$coda_tx->bic,
             'bban'=>$coda_tx->bban,
             'iban'=>$coda_tx->iban,
-			'txncode'=>$coda_tx->txncode,
-			'move_struct_code'=>$coda_tx->move_struct_code,
-			'purpose'=>trim($coda_tx->move_msg),    
+			'txncode'=>$coda_tx->txcode,
+			'move_struct_code'=>$coda_tx->move_struct_code,			  
             'customer_ref'=>$coda_tx->customer_ref,           
-			'country_code'=>$coda_tx->country_code,			
+			'country_code'=>$coda_tx->country_code,	
+			'sub_lines'=>$coda_tx->sub_lines,
+			'purpose_data'=>$coda_tx->purpose_data,
             //...todo
         );
-		$extra = (array)json_decode($coda_tx->extra);
-		if(!empty($extra)){
-			$data_parsed['extra'] =  $extra;			
+		//remove false,null and empty values
+		foreach($data_parsed as $k=>$v){
+			if(empty($v)){
+				unset($data_parsed[$k]);
+			}
 		}
+		
         $btxb = $this->_current_transaction_batch;
         $party_bank_account_id = $this->getOrCreateBankAccount($coda_tx);
         $btx = array(
@@ -505,6 +507,19 @@ class CRM_Becoda2_PluginImpl_Becoda2 extends CRM_Banking_PluginModel_Importer{
 		}
 		return $bank_account->id;    
 	  }
-    
+	  
+	  // DDMMYY -> YYYY-MM-DD
+	  protected static function formatDate($datestr){
+		  $d = substr($datestr, 0, 2);
+		  $m = substr($datestr, 2, 2);
+		  $y = '20'.substr($datestr, 4, 2);
+		  return $y.'-'.$m.'-'.$d;
+	  }
+
+	  protected static function filterWhiteSpace($string){
+		$pattern = array("/^\s+/", "/\s{2,}/", "/\s+\$/");
+		$replace = array("", " ", "");
+		return preg_replace($pattern, $replace, $string);
+	}	  
 
 }
