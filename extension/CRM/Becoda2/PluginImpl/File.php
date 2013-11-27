@@ -1462,7 +1462,7 @@ class CRM_Becoda2_PluginImpl_File {
 	}
 	
 	// Information pertaining to coupons
-	protected function parseInfo($info_msg){
+	protected function parseInfo011($info_msg){
 		$data = array(
 			'info_type' => 'coupons',
 			'order_nr' => $this->filterWhiteSpace(substr($info_msg, 0, 13)),
