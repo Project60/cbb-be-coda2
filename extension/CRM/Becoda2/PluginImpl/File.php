@@ -38,7 +38,7 @@ class CRM_Becoda2_PluginImpl_File {
     protected $codabatchrecords = array();
     
     static $coda_batch_fields = array('sequence', 'date_created_by_bank', 'name', 'bic', 'bban', 'iban', 'currency', 'country_code', 'starting_balance', 'ending_balance', 'starting_date', 'ending_date', 'source', 'file', 'extra', 'status', 'count_codarecords');    
-	static $coda_tx_fields = array('sequence', 'coda_batch', 'value_date', 'booking_date', 'name', 'street', 'streetnr', 'streetsuff', 'zipcode', 'city', 'country_code', 'bic', 'bban', 'iban', 'currency', 'amount', 'txcode', 'move_struct_code', 'move_msg', 'customer_ref', 'category_purpose', 'purpose', 'move_detail', 'info_struct_code', 'info_msg', 'source', 'purpose_data', 'sub_lines', 'info', 'identification_code');
+    static $coda_tx_fields = array('sequence', 'coda_batch', 'value_date', 'booking_date', 'name', 'street', 'streetnr', 'streetsuff', 'zipcode', 'city', 'country_code', 'bic', 'bban', 'iban', 'currency', 'amount', 'txcode', 'move_struct_code', 'move_msg', 'customer_ref', 'category_purpose', 'purpose', 'move_detail', 'info_struct_code', 'info_msg', 'source', 'purpose_data', 'sub_lines', 'info', 'identification_code');
     protected $nrRecs;
     protected $_codabatch_extra = array();
     protected $meta=array('nextcode'=>null, 
@@ -365,9 +365,9 @@ class CRM_Becoda2_PluginImpl_File {
 			
 			$parse_move_msg_method = 'parse'.$move_struct_code;
 			if(method_exists($this, $parse_move_msg_method)){
-				$rec->purpose_data = $this->$parse_move_msg_method($rec->move_msg);
+				$rec->purpose = $this->$parse_move_msg_method($rec->move_msg);
 			}else{
-				$rec->purpose_data = self::filterWhiteSpace($rec->move_msg);
+				$rec->purpose = self::filterWhiteSpace($rec->move_msg);
 			}
 						
 			$parse_info_msg_method = 'parseInfo'.$rec->info_struct_code;
@@ -395,7 +395,7 @@ class CRM_Becoda2_PluginImpl_File {
 					'amount'=>$rec->amount,
 					'txcode'=>$rec->txcode,
 					'customer_ref'=>$rec->customer_ref,									
-					'purpose_data'=>$rec->purpose_data,	
+					'purpose'=>$rec->purpose,	
 					'info'=>$rec->info,
 				);
 				
@@ -959,7 +959,7 @@ class CRM_Becoda2_PluginImpl_File {
 	// Credit transfer or cash payment with structured format communication
 	protected function parse101($move_msg){
 		$data = array(
-			'txtype' => 'CC',	// CreditCard transfer or cash payment with struct format communication
+			'txtype' => 'CC',	// Credit transfer or cash payment with struct format communication
 			'struct_communication' => substr($move_msg,0,10).' '.  substr($move_msg, 10, 2),	// 10 + 2 (digit 97)
 		);
 		return $data;
@@ -968,7 +968,7 @@ class CRM_Becoda2_PluginImpl_File {
 	// Credit transfer or cash payment with reconstituted structured format communication
 	protected function parse102($move_msg){
 		$data = array(
-			'txtype' => 'CC',	// CreditCard transfer or cash payment with struct format communication
+			'txtype' => 'CC',	// Credit transfer or cash payment with struct format communication
 			'struct_communication' => substr($move_msg,0,10).' '.  substr($move_msg, 10, 2),	// 10 + 2 (digit 97)
 		);
 		return $data;
